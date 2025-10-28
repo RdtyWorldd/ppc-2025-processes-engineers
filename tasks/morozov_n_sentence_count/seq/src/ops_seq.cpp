@@ -2,6 +2,7 @@
 
 #include <numeric>
 #include <vector>
+#include <string>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
 #include "util/include/util.hpp"
@@ -15,46 +16,40 @@ MorozovNSentenceCountSEQ::MorozovNSentenceCountSEQ(const InType &in) {
 }
 
 bool MorozovNSentenceCountSEQ::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
+  return (!GetInput().empty()) && (GetOutput() == 0);
 }
 
 bool MorozovNSentenceCountSEQ::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 bool MorozovNSentenceCountSEQ::RunImpl() {
-  if (GetInput() == 0) {
+  if (GetInput().empty()) {
     return false;
   }
-
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
-      }
+  
+  std::string s = GetInput();
+  int counter = 0;
+  for (size_t i = 0; i < s.length(); i++) {
+    if((s[i] == '.') && (s[i-1] != '.') && (s[i-1] != '?') && (s[i-1] != '!')) {
+        counter++;
+    }
+    else if((s[i] == '!') && (s[i-1] != '.') && (s[i-1] != '?') && (s[i-1] != '!')) {
+      counter++;
+    }
+    else if((s[i] == '?') && (s[i-1] != '.') && (s[i-1] != '?') && (s[i-1] != '!')) {
+      counter++;
     }
   }
 
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
-
-  int counter = 0;
-  for (int i = 0; i < num_threads; i++) {
-    counter++;
-  }
-
   if (counter != 0) {
-    GetOutput() /= counter;
+    GetOutput() = counter;
   }
   return GetOutput() > 0;
 }
 
 bool MorozovNSentenceCountSEQ::PostProcessingImpl() {
-  GetOutput() -= GetInput();
-  return GetOutput() > 0;
+  return true;
 }
 
 }  // namespace morozov_n_sentence_count
