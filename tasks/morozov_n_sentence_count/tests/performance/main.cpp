@@ -8,8 +8,8 @@
 namespace morozov_n_sentence_count {
 
 class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const std::string test_file_path = "test_3.txt";
-  const std::size_t task_answer = 100;
+  const std::string test_file_path = "test_4.txt";
+  const std::size_t task_answer = 18000;
   InType input_data_{};
 
   void SetUp() override {
@@ -25,7 +25,8 @@ class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InT
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return output_data >= task_answer;
+    std::cout << output_data << std::endl;
+    return output_data == task_answer;
   }
 
   InType GetTestInputData() final {
