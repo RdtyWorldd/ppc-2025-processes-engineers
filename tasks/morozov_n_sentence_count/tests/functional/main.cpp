@@ -48,7 +48,8 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    std::cout << output_data << std::endl;
+    std::cout << output_data;
+    std::cout << std::endl;
     return output_data == task_answer;
   }
 
