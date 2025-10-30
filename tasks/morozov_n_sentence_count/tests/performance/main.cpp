@@ -8,15 +8,24 @@
 namespace morozov_n_sentence_count {
 
 class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
+  const std::string test_file_path = "test_3.txt";
+  const std::size_t task_answer = 100;
   InType input_data_{};
 
   void SetUp() override {
-    input_data_ = kCount_;
+    std::string text = "";
+    {
+      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, test_file_path);
+      std::ifstream file(abs_path);
+      std::stringstream ss;
+      ss << file.rdbuf();
+      text = ss.str();
+    }
+    input_data_ = text;
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return output_data >= 0;
+    return output_data >= task_answer;
   }
 
   InType GetTestInputData() final {
@@ -29,7 +38,7 @@ TEST_P(MorozovNRunSentenceCountPerfTests, RunPerfModes) {
 }
 
 const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, /*MorozovNSentenceCountMPI,*/ MorozovNSentenceCountSEQ>(PPC_SETTINGS_morozov_n_sentence_count);
+    ppc::util::MakeAllPerfTasks<InType, MorozovNSentenceCountMPI, MorozovNSentenceCountSEQ>(PPC_SETTINGS_morozov_n_sentence_count);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

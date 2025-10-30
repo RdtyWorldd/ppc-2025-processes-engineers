@@ -57,7 +57,7 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
 
  private:
   InType input_data_ = "";
-  int task_answer = 0;
+  std::size_t task_answer = 0;
 };
 
 namespace {
@@ -70,7 +70,7 @@ const std::array<TestType, 3> kTestParam = {std::make_tuple(1, "test_1.txt", 1),
                                             std::make_tuple(3, "test_3.txt", 100)};
 
 const auto kTestTasksList =
-    std::tuple_cat(/*ppc::util::AddFuncTask<MorozovNSentenceCountMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count),*/
+    std::tuple_cat(ppc::util::AddFuncTask<MorozovNSentenceCountMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count),
                    ppc::util::AddFuncTask<MorozovNSentenceCountSEQ, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);

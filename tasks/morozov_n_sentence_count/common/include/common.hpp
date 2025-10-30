@@ -8,8 +8,8 @@
 namespace morozov_n_sentence_count {
 
 using InType = std::string;
-using OutType = int;
-using TestType = std::tuple<int, std::string, int>;
+using OutType = std::size_t;
+using TestType = std::tuple<int, std::string, std::size_t>;
 using BaseTask = ppc::task::Task<InType, OutType>;
 
 }  // namespace morozov_n_sentence_count

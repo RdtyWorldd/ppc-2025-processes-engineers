@@ -17,55 +17,72 @@ MorozovNSentenceCountMPI::MorozovNSentenceCountMPI(const InType &in) {
 }
 
 bool MorozovNSentenceCountMPI::ValidationImpl() {
-  return (GetInput() > 0) && (GetOutput() == 0);
+  return (!GetInput().empty()) && (GetOutput() == 0);
 }
 
 bool MorozovNSentenceCountMPI::PreProcessingImpl() {
-  GetOutput() = 2 * GetInput();
-  return GetOutput() > 0;
+  if(GetInput()[0] == '.' || GetInput()[0] == '!' || GetInput()[0] == '?')
+  {
+    GetInput()[0] = ' ';
+  }
+  return true;
 }
 
 bool MorozovNSentenceCountMPI::RunImpl() {
-  auto input = GetInput();
-  if (input == 0) {
+  if (GetInput().empty()) {
     return false;
   }
+  std::string input = GetInput();
 
-  for (InType i = 0; i < GetInput(); i++) {
-    for (InType j = 0; j < GetInput(); j++) {
-      for (InType k = 0; k < GetInput(); k++) {
-        std::vector<InType> tmp(i + j + k, 1);
-        GetOutput() += std::accumulate(tmp.begin(), tmp.end(), 0);
-        GetOutput() -= i + j + k;
-      }
-    }
+  int mpi_size = 0;
+  int rank = 0;
+
+  // int start_with = 0;
+  // int end_with = 0;
+
+  std::size_t index_start = 0;
+  std::size_t index_end = 0;
+
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+  MPI_Comm_rank(MPI_COMM_WORLD, & rank);
+
+  std::size_t step = input.length() / mpi_size;
+  std::size_t mod = input.length() - step * mpi_size;
+
+  if(2 * mod >= step) {
+    step = step + mod;
+  }
+  index_start = step * rank;
+  index_end = step * (rank + 1);
+
+  if(rank == mpi_size - 1) {
+    index_end = input.length();
   }
 
-  const int num_threads = ppc::util::GetNumThreads();
-  GetOutput() *= num_threads;
-
-  int rank = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-
-  if (rank == 0) {
-    GetOutput() /= num_threads;
-  } else {
-    int counter = 0;
-    for (int i = 0; i < num_threads; i++) {
+  std::size_t counter = 0;
+  for (std::size_t i = index_start; i < index_end; i++) {
+    if((input[i] == '.') && (input[i-1] != '.') && (input[i-1] != '?') && (input[i-1] != '!')) {
+        counter++;
+    }
+    else if((input[i] == '!') && (input[i-1] != '.') && (input[i-1] != '?') && (input[i-1] != '!')) {
       counter++;
     }
-
-    if (counter != 0) {
-      GetOutput() /= counter;
+    else if((input[i] == '?') && (input[i-1] != '.') && (input[i-1] != '?') && (input[i-1] != '!')) {
+      counter++;
     }
   }
 
-  MPI_Barrier(MPI_COMM_WORLD);
+  const std::size_t k_counter = counter;
+  std::size_t counter_sum = 0;
+  MPI_Reduce(&k_counter, &counter_sum, 1, MPI_UNSIGNED_LONG, MPI_SUM, 0, MPI_COMM_WORLD);
+
+  MPI_Bcast(&counter_sum, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
+  
+  GetOutput() = counter_sum;
   return GetOutput() > 0;
 }
 
 bool MorozovNSentenceCountMPI::PostProcessingImpl() {
-  GetOutput() -= GetInput();
   return GetOutput() > 0;
 }
 
