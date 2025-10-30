@@ -43,14 +43,14 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
       text = ss.str();
     }
     
-    task_answer = std::get<2>(params);
+    task_answer_ = std::get<2>(params);
     input_data_ = text;
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
     std::cout << output_data;
     std::cout << std::endl;
-    return output_data == task_answer;
+    return output_data == task_answer_;
   }
 
   InType GetTestInputData() final {
@@ -59,7 +59,7 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
 
  private:
   InType input_data_ = "";
-  std::size_t task_answer = 0;
+  std::size_t task_answer_ = 0;
 };
 
 namespace {
