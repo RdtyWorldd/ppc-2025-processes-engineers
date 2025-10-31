@@ -60,8 +60,8 @@ bool MorozovNSentenceCountMPI::RunImpl() {
     index_end = input.length();
   }
 
-  std::cout << rank << ":" << index_start << std::endl;
-  std::cout << rank <<  ":" << index_end << std::endl;
+  std::cout << std::to_string(rank) + " : " + std::to_string(index_start) + 
+              " - " + std::to_string(index_end) + "\n";
 
   std::size_t counter = 0;
   for (std::size_t i = index_start; i < index_end; i++) {
