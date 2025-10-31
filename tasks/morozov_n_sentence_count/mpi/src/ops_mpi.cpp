@@ -4,6 +4,7 @@
 
 #include <numeric>
 #include <vector>
+#include <iostream>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
 #include "util/include/util.hpp"
@@ -50,7 +51,7 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   std::size_t mod = input.length() - step * mpi_size;
 
   if(2 * mod >= step) {
-    step = step + mod;
+    step = step + mpi_size / mod;
   }
   index_start = step * rank;
   index_end = step * (rank + 1);
@@ -58,6 +59,9 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   if(rank == mpi_size - 1) {
     index_end = input.length();
   }
+
+  std::cout << rank << ":" << index_start << std::endl;
+  std::cout << rank <<  ":" << index_end << std::endl;
 
   std::size_t counter = 0;
   for (std::size_t i = index_start; i < index_end; i++) {
