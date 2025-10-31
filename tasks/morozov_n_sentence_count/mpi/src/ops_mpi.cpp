@@ -37,9 +37,6 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   int mpi_size = 0;
   int rank = 0;
 
-  // int start_with = 0;
-  // int end_with = 0;
-
   std::size_t index_start = 0;
   std::size_t index_end = 0;
 
@@ -47,11 +44,7 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
 
   std::size_t step = input.length() / mpi_size;
-  std::size_t mod = input.length() - step * mpi_size;
 
-  if (2 * mod >= step) {
-    step = step + mpi_size / mod;
-  }
   index_start = step * rank;
   index_end = step * (rank + 1);
 
