@@ -52,8 +52,6 @@ bool MorozovNSentenceCountMPI::RunImpl() {
     index_end = input.length();
   }
 
-  std::cout << std::to_string(rank) + " : " + std::to_string(index_start) + " - " + std::to_string(index_end) + "\n";
-
   std::size_t counter = 0;
   for (std::size_t i = index_start; i < index_end; i++) {
     if ((input[i] == '.') && (input[i - 1] != '.') && (input[i - 1] != '?') && (input[i - 1] != '!')) {
@@ -72,6 +70,11 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   MPI_Bcast(&counter_sum, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 
   GetOutput() = counter_sum;
+
+  // debug output
+  std::cout << std::to_string(rank) + " : " + std::to_string(index_start) + " - " + std::to_string(index_end) +
+                   "\nanswer: " + std::to_string(counter_sum) + "\n";
+
   return GetOutput() > 0;
 }
 
