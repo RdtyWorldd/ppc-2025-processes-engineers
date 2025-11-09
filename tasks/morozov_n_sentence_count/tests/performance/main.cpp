@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include <iostream>
+#include <random>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
 #include "morozov_n_sentence_count/mpi/include/ops_mpi.hpp"
@@ -10,30 +11,47 @@
 namespace morozov_n_sentence_count {
 
 class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const std::string test_file_path_ = "test_4.txt";
-  const std::size_t task_answer_ = 18000;
+  // const std::string test_file_path_ = "test_4.txt";
+  const std::size_t task_answer_ = 180000;
   InType input_data_{};
 
   void SetUp() override {
-    std::string text = "";
-    {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, test_file_path_);
-      std::ifstream file(abs_path);
-      std::stringstream ss;
-      ss << file.rdbuf();
-      text = ss.str();
-    }
-    input_data_ = text;
+    // std::string text = "";
+    // {
+    //   std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, test_file_path_);
+    //   std::ifstream file(abs_path);
+    //   std::stringstream ss;
+    //   ss << file.rdbuf();
+    //   text = ss.str();
+    // }
+
+    input_data_ = GenerateTestData(task_answer_, 0);
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    std::cout << output_data;
-    std::cout << std::endl;
     return output_data == task_answer_;
   }
 
   InType GetTestInputData() final {
     return input_data_;
+  }
+
+  std::string GenerateTestData(const std::size_t s_count, const int seed) {
+    std::mt19937 gen(seed);
+    std::uniform_int_distribution<> dist('A', 'z');
+    std::string res = "";
+    char *sentence = new char['z' + 2];
+    for (std::size_t i = 0; i < s_count; i++) {
+      int sentence_size = dist(gen);
+      for (int j = 0; j < sentence_size; j++) {
+        sentence[j] = (char)dist(gen);
+      }
+      sentence[sentence_size] = '.';
+      sentence[sentence_size + 1] = '\0';
+      res += sentence;
+    }
+    delete[] sentence;
+    return res;
   }
 };
 
@@ -41,8 +59,8 @@ TEST_P(MorozovNRunSentenceCountPerfTests, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, MorozovNSentenceCountMPI, MorozovNSentenceCountSEQ>(PPC_SETTINGS_morozov_n_sentence_count);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, MorozovNSentenceCountMPI, MorozovNSentenceCountSEQ>(
+    PPC_SETTINGS_morozov_n_sentence_count);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 

@@ -5,15 +5,16 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <fstream>
+#include <iostream>
 #include <numeric>
+#include <random>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <tuple>
 #include <utility>
 #include <vector>
-#include <fstream>
-#include <sstream>
-#include <iostream>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
 #include "morozov_n_sentence_count/mpi/include/ops_mpi.hpp"
@@ -26,6 +27,9 @@ namespace morozov_n_sentence_count {
 class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
+    if (std::get<1>(test_param).empty()) {
+      return std::to_string(std::get<0>(test_param)) + "_" + "gen";
+    }
     return std::to_string(std::get<0>(test_param)) + "_" + "file";
   }
 
@@ -33,18 +37,21 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
   void SetUp() override {
     std::string text = "";
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
-    
-    //Read text from params
-    {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, std::get<1>(params));
+    std::string test_file_path = std::get<1>(params);
+    // Read text from params
+    if (test_file_path.empty()) {
+      task_answer_ = std::get<2>(params);
+      input_data_ = GenerateTestData(task_answer_, 0);
+    } else {
+      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, test_file_path);
       std::ifstream file(abs_path);
       std::stringstream ss;
       ss << file.rdbuf();
       text = ss.str();
+
+      task_answer_ = std::get<2>(params);
+      input_data_ = text;
     }
-    
-    task_answer_ = std::get<2>(params);
-    input_data_ = text;
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
@@ -60,6 +67,24 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
  private:
   InType input_data_ = "";
   std::size_t task_answer_ = 0;
+
+  std::string GenerateTestData(const std::size_t s_count, const int seed) {
+    std::mt19937 gen(seed);
+    std::uniform_int_distribution<> dist('A', 'z');
+    std::string res = "";
+    char *sentence = new char['z' + 2];
+    for (std::size_t i = 0; i < s_count; i++) {
+      int sentence_size = dist(gen);
+      for (int j = 0; j < sentence_size; j++) {
+        sentence[j] = (char)dist(gen);
+      }
+      sentence[sentence_size] = '.';
+      sentence[sentence_size + 1] = '\0';
+      res += sentence;
+    }
+    delete[] sentence;
+    return res;
+  }
 };
 
 namespace {
@@ -68,12 +93,12 @@ TEST_P(MorozovNRunSentenceCountTests, SentenceCountFromText) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(1, "test_1.txt", 1), std::make_tuple(2, "test_2.txt", 4), 
-                                            std::make_tuple(3, "test_3.txt", 100)};
+const std::array<TestType, 4> kTestParam = {std::make_tuple(1, "test_1.txt", 1), std::make_tuple(2, "test_2.txt", 4),
+                                            std::make_tuple(3, "test_3.txt", 100), std::make_tuple(4, "", 10)};
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<MorozovNSentenceCountMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count),
-                   ppc::util::AddFuncTask<MorozovNSentenceCountSEQ, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count));
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<MorozovNSentenceCountMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count),
+    ppc::util::AddFuncTask<MorozovNSentenceCountSEQ, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
