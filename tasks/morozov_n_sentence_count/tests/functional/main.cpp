@@ -1,13 +1,8 @@
 #include <gtest/gtest.h>
-#include <stb/stb_image.h>
 
-#include <algorithm>
 #include <array>
 #include <cstddef>
-#include <cstdint>
 #include <fstream>
-#include <iostream>
-#include <numeric>
 #include <random>
 #include <sstream>
 #include <stdexcept>
@@ -55,8 +50,6 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    std::cout << output_data;
-    std::cout << std::endl;
     return output_data == task_answer_;
   }
 
@@ -71,12 +64,13 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
   std::string GenerateTestData(const std::size_t s_count, const int seed) {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<> dist('A', 'z');
-    std::string res = "";
+    std::string res;
     char *sentence = new char['z' + 2];
     for (std::size_t i = 0; i < s_count; i++) {
       int sentence_size = dist(gen);
       for (int j = 0; j < sentence_size; j++) {
-        sentence[j] = (char)dist(gen);
+        sentence[j] = static_cast<char>(dist(gen));
+        ;
       }
       sentence[sentence_size] = '.';
       sentence[sentence_size + 1] = '\0';

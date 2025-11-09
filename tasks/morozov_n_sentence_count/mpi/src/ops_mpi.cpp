@@ -2,12 +2,11 @@
 
 #include <mpi.h>
 
+#include <cstddef>
 #include <iostream>
-#include <numeric>
-#include <vector>
+#include <string>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace morozov_n_sentence_count {
 
@@ -54,11 +53,8 @@ bool MorozovNSentenceCountMPI::RunImpl() {
 
   std::size_t counter = 0;
   for (std::size_t i = index_start; i < index_end; i++) {
-    if ((input[i] == '.') && (input[i - 1] != '.') && (input[i - 1] != '?') && (input[i - 1] != '!')) {
-      counter++;
-    } else if ((input[i] == '!') && (input[i - 1] != '.') && (input[i - 1] != '?') && (input[i - 1] != '!')) {
-      counter++;
-    } else if ((input[i] == '?') && (input[i - 1] != '.') && (input[i - 1] != '?') && (input[i - 1] != '!')) {
+    if ((input[i] == '.' || input[i] == '!' || input[i] == '?') && (input[i - 1] != '.') && (input[i - 1] != '?') &&
+        (input[i - 1] != '!')) {
       counter++;
     }
   }
@@ -75,11 +71,11 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   std::cout << std::to_string(rank) + " : " + std::to_string(index_start) + " - " + std::to_string(index_end) +
                    "\nanswer: " + std::to_string(counter_sum) + "\n";
 
-  return GetOutput() > 0;
+  return true;
 }
 
 bool MorozovNSentenceCountMPI::PostProcessingImpl() {
-  return GetOutput() > 0;
+  return true;
 }
 
 }  // namespace morozov_n_sentence_count

@@ -1,11 +1,9 @@
 #include "morozov_n_sentence_count/seq/include/ops_seq.hpp"
 
-#include <numeric>
-#include <vector>
+#include <cstddef>
 #include <string>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace morozov_n_sentence_count {
 
@@ -27,17 +25,12 @@ bool MorozovNSentenceCountSEQ::RunImpl() {
   if (GetInput().empty()) {
     return false;
   }
-  
-  std::string s = GetInput();
-  int counter = 0;
-  for (size_t i = 0; i < s.length(); i++) {
-    if((s[i] == '.') && (s[i-1] != '.') && (s[i-1] != '?') && (s[i-1] != '!')) {
-        counter++;
-    }
-    else if((s[i] == '!') && (s[i-1] != '.') && (s[i-1] != '?') && (s[i-1] != '!')) {
-      counter++;
-    }
-    else if((s[i] == '?') && (s[i-1] != '.') && (s[i-1] != '?') && (s[i-1] != '!')) {
+
+  std::string input = GetInput();
+  std::size_t counter = 0;
+  for (size_t i = 0; i < input.length(); i++) {
+    if ((input[i] == '.' || input[i] == '!' || input[i] == '?') && (input[i - 1] != '.') && (input[i - 1] != '?') &&
+        (input[i - 1] != '!')) {
       counter++;
     }
   }
@@ -45,7 +38,7 @@ bool MorozovNSentenceCountSEQ::RunImpl() {
   if (counter != 0) {
     GetOutput() = counter;
   }
-  return GetOutput() > 0;
+  return true;
 }
 
 bool MorozovNSentenceCountSEQ::PostProcessingImpl() {

@@ -1,7 +1,8 @@
 #include <gtest/gtest.h>
 
-#include <iostream>
+#include <cstddef>
 #include <random>
+#include <string>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
 #include "morozov_n_sentence_count/mpi/include/ops_mpi.hpp"
@@ -16,15 +17,6 @@ class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InT
   InType input_data_{};
 
   void SetUp() override {
-    // std::string text = "";
-    // {
-    //   std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, test_file_path_);
-    //   std::ifstream file(abs_path);
-    //   std::stringstream ss;
-    //   ss << file.rdbuf();
-    //   text = ss.str();
-    // }
-
     input_data_ = GenerateTestData(task_answer_, 0);
   }
 
@@ -39,12 +31,12 @@ class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InT
   std::string GenerateTestData(const std::size_t s_count, const int seed) {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<> dist('A', 'z');
-    std::string res = "";
+    std::string res;
     char *sentence = new char['z' + 2];
     for (std::size_t i = 0; i < s_count; i++) {
       int sentence_size = dist(gen);
       for (int j = 0; j < sentence_size; j++) {
-        sentence[j] = (char)dist(gen);
+        sentence[j] = static_cast<char>(dist(gen));
       }
       sentence[sentence_size] = '.';
       sentence[sentence_size + 1] = '\0';
