@@ -8,8 +8,6 @@
 #include <stdexcept>
 #include <string>
 #include <tuple>
-#include <utility>
-#include <vector>
 
 #include "morozov_n_sentence_count/common/include/common.hpp"
 #include "morozov_n_sentence_count/mpi/include/ops_mpi.hpp"
@@ -30,7 +28,7 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
 
  protected:
   void SetUp() override {
-    std::string text = "";
+    std::string text;
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
     std::string test_file_path = std::get<1>(params);
     // Read text from params
@@ -40,6 +38,9 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
     } else {
       std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_sentence_count, test_file_path);
       std::ifstream file(abs_path);
+      if (!file.is_open()) {
+        throw std::runtime_error("Failed to open file: " + abs_path);
+      }
       std::stringstream ss;
       ss << file.rdbuf();
       text = ss.str();
@@ -58,10 +59,10 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
   }
 
  private:
-  InType input_data_ = "";
+  InType input_data_;
   std::size_t task_answer_ = 0;
 
-  std::string GenerateTestData(const std::size_t s_count, const int seed) {
+  static std::string GenerateTestData(const std::size_t s_count, const int seed) {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<> dist('A', 'z');
     std::string res;
@@ -70,7 +71,6 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
       int sentence_size = dist(gen);
       for (int j = 0; j < sentence_size; j++) {
         sentence[j] = static_cast<char>(dist(gen));
-        ;
       }
       sentence[sentence_size] = '.';
       sentence[sentence_size + 1] = '\0';

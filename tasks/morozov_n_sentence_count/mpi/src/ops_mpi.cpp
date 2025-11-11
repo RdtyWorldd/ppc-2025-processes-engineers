@@ -31,7 +31,7 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   if (GetInput().empty()) {
     return false;
   }
-  std::string input = GetInput();
+  std::string &input = GetInput();
 
   int mpi_size = 0;
   int rank = 0;
@@ -45,7 +45,7 @@ bool MorozovNSentenceCountMPI::RunImpl() {
   std::size_t step = input.length() / mpi_size;
 
   index_start = step * rank;
-  index_end = step * (rank + 1);
+  index_end = step + index_start;
 
   if (rank == mpi_size - 1) {
     index_end = input.length();

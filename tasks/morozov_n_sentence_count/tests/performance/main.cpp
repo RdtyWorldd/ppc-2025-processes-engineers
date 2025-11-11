@@ -14,7 +14,7 @@ namespace morozov_n_sentence_count {
 class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InType, OutType> {
   // const std::string test_file_path_ = "test_4.txt";
   const std::size_t task_answer_ = 180000;
-  InType input_data_{};
+  InType input_data_;
 
   void SetUp() override {
     input_data_ = GenerateTestData(task_answer_, 0);
@@ -28,7 +28,7 @@ class MorozovNRunSentenceCountPerfTests : public ppc::util::BaseRunPerfTests<InT
     return input_data_;
   }
 
-  std::string GenerateTestData(const std::size_t s_count, const int seed) {
+  static std::string GenerateTestData(const std::size_t s_count, const int seed) {
     std::mt19937 gen(seed);
     std::uniform_int_distribution<> dist('A', 'z');
     std::string res;

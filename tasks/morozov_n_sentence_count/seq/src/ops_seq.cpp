@@ -18,6 +18,9 @@ bool MorozovNSentenceCountSEQ::ValidationImpl() {
 }
 
 bool MorozovNSentenceCountSEQ::PreProcessingImpl() {
+  if (GetInput()[0] == '.' || GetInput()[0] == '!' || GetInput()[0] == '?') {
+    GetInput()[0] = ' ';
+  }
   return true;
 }
 
@@ -26,7 +29,7 @@ bool MorozovNSentenceCountSEQ::RunImpl() {
     return false;
   }
 
-  std::string input = GetInput();
+  std::string &input = GetInput();
   std::size_t counter = 0;
   for (size_t i = 0; i < input.length(); i++) {
     if ((input[i] == '.' || input[i] == '!' || input[i] == '?') && (input[i - 1] != '.') && (input[i - 1] != '?') &&
