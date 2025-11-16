@@ -14,10 +14,14 @@ MorozovNSentenceCountSEQ::MorozovNSentenceCountSEQ(const InType &in) {
 }
 
 bool MorozovNSentenceCountSEQ::ValidationImpl() {
-  return (!GetInput().empty()) && (GetOutput() == 0);
+  validated_ = (!GetInput().empty()) && (GetOutput() == 0);
+  return validated_;
 }
 
 bool MorozovNSentenceCountSEQ::PreProcessingImpl() {
+  if (!validated_) {
+    return false;
+  }
   if (GetInput()[0] == '.' || GetInput()[0] == '!' || GetInput()[0] == '?') {
     GetInput()[0] = ' ';
   }
@@ -25,7 +29,7 @@ bool MorozovNSentenceCountSEQ::PreProcessingImpl() {
 }
 
 bool MorozovNSentenceCountSEQ::RunImpl() {
-  if (GetInput().empty()) {
+  if (!validated_) {
     return false;
   }
 
@@ -45,7 +49,7 @@ bool MorozovNSentenceCountSEQ::RunImpl() {
 }
 
 bool MorozovNSentenceCountSEQ::PostProcessingImpl() {
-  return true;
+  return validated_;
 }
 
 }  // namespace morozov_n_sentence_count

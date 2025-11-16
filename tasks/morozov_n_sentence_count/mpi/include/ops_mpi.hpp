@@ -17,6 +17,8 @@ class MorozovNSentenceCountMPI : public BaseTask {
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
+
+  bool validated_ = false;
 };
 
 }  // namespace morozov_n_sentence_count

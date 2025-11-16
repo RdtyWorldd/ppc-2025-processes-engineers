@@ -83,12 +83,29 @@ class MorozovNRunSentenceCountTests : public ppc::util::BaseRunFuncTests<InType,
 
 namespace {
 
+TEST(MorozovNSentenceCountTests, EmptyStringInputMPI) {
+  MorozovNSentenceCountMPI task("");
+  EXPECT_FALSE(task.Validation());
+  EXPECT_FALSE(task.PreProcessing());
+  EXPECT_FALSE(task.Run());
+  EXPECT_FALSE(task.PostProcessing());
+}
+
+TEST(MorozovNSentenceCountTests, EmpyStringInputSEQ) {
+  MorozovNSentenceCountSEQ task("");
+  EXPECT_FALSE(task.Validation());
+  EXPECT_FALSE(task.PreProcessing());
+  EXPECT_FALSE(task.Run());
+  EXPECT_FALSE(task.PostProcessing());
+}
+
 TEST_P(MorozovNRunSentenceCountTests, SentenceCountFromText) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 4> kTestParam = {std::make_tuple(1, "test_1.txt", 1), std::make_tuple(2, "test_2.txt", 4),
-                                            std::make_tuple(3, "test_3.txt", 100), std::make_tuple(4, "", 10)};
+const std::array<TestType, 6> kTestParam = {std::make_tuple(0, "test_0.txt", 0), std::make_tuple(1, "test_1.txt", 1),
+                                            std::make_tuple(2, "test_2.txt", 4), std::make_tuple(3, "test_3.txt", 100),
+                                            std::make_tuple(4, "test_4.txt", 1), std::make_tuple(5, "", 10)};
 
 const auto kTestTasksList = std::tuple_cat(
     ppc::util::AddFuncTask<MorozovNSentenceCountMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_sentence_count),

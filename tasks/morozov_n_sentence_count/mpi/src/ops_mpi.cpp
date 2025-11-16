@@ -17,10 +17,14 @@ MorozovNSentenceCountMPI::MorozovNSentenceCountMPI(const InType &in) {
 }
 
 bool MorozovNSentenceCountMPI::ValidationImpl() {
-  return (!GetInput().empty()) && (GetOutput() == 0);
+  validated_ = (!GetInput().empty()) && (GetOutput() == 0);
+  return validated_;
 }
 
 bool MorozovNSentenceCountMPI::PreProcessingImpl() {
+  if (!validated_) {
+    return false;
+  }
   if (GetInput()[0] == '.' || GetInput()[0] == '!' || GetInput()[0] == '?') {
     GetInput()[0] = ' ';
   }
@@ -28,7 +32,7 @@ bool MorozovNSentenceCountMPI::PreProcessingImpl() {
 }
 
 bool MorozovNSentenceCountMPI::RunImpl() {
-  if (GetInput().empty()) {
+  if (!validated_) {
     return false;
   }
   std::string &input = GetInput();
@@ -75,7 +79,7 @@ bool MorozovNSentenceCountMPI::RunImpl() {
 }
 
 bool MorozovNSentenceCountMPI::PostProcessingImpl() {
-  return true;
+  return validated_;
 }
 
 }  // namespace morozov_n_sentence_count
