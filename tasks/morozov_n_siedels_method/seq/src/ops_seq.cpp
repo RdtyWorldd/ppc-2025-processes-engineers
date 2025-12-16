@@ -7,14 +7,12 @@
 
 #include "morozov_n_siedels_method/common/include/common.hpp"
 #include "util/include/util.hpp"
-#include "ops_seq.hpp"
 
 namespace morozov_n_siedels_method {
 
 MorozovNSiedelsMethodSEQ::MorozovNSiedelsMethodSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
-  GetOutput() = 0;
 }
 
 bool MorozovNSiedelsMethodSEQ::ValidationImpl() {
@@ -51,6 +49,10 @@ bool MorozovNSiedelsMethodSEQ::RunImpl() {
     }
   } while (InEpsBound(iter_eps, eps));
   
+  for(size_t i = 0; i < x.size(); i++) {
+    std::cout << x[i] << " ";
+  }
+  std::cout <<"\n";
   GetOutput() = x;
   return true;
 }
