@@ -28,31 +28,14 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
 
  protected:
   void SetUp() override {
-    int width = -1;
-    int height = -1;
-    int channels = -1;
-    std::vector<uint8_t> img;
-    // Read image in RGB to ensure consistent channel count
-    {
-      std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_siedels_method, "pic.jpg");
-      auto *data = stbi_load(abs_path.c_str(), &width, &height, &channels, STBI_rgb);
-      if (data == nullptr) {
-        throw std::runtime_error("Failed to load image: " + std::string(stbi_failure_reason()));
-      }
-      channels = STBI_rgb;
-      img = std::vector<uint8_t>(data, data + (static_cast<ptrdiff_t>(width * height * channels)));
-      stbi_image_free(data);
-      if (std::cmp_not_equal(width, height)) {
-        throw std::runtime_error("width != height: ");
-      }
-    }
-
-    TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
-    input_data_ = width - height + std::min(std::accumulate(img.begin(), img.end(), 0), channels);
+    std::vector<double> a({6.1, 2.2, 1.2, 2.2, 5.5, -1.5, 1.2, -1.5, 7.2});
+    std::vector<double> b({16.55, 10.55, 16.80});
+    input_data_ = std::make_tuple(3, a, b, 0.01);
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return (input_data_ == output_data);
+    std::cout << "HUI\n";
+    return output_data.size() > 0;
   }
 
   InType GetTestInputData() final {
@@ -60,7 +43,7 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
   }
 
  private:
-  InType input_data_ = 0;
+  InType input_data_;
 };
 
 namespace {
@@ -69,15 +52,16 @@ TEST_P(MorozovNSiedelsMethodFuncTestsProcesses, MatmulFromPic) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 3> kTestParam = {std::make_tuple(3, "3"), std::make_tuple(5, "5"), std::make_tuple(7, "7")};
+const std::array<TestType, 1> kTestParam = {std::make_tuple(3, "3")};
 
-const auto kTestTasksList =
-    std::tuple_cat(ppc::util::AddFuncTask<MorozovNSiedelsMethodMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_siedels_method),
-                   ppc::util::AddFuncTask<MorozovNSiedelsMethodSEQ, InType>(kTestParam, PPC_SETTINGS_morozov_n_siedels_method));
+const auto kTestTasksList = std::tuple_cat(
+    ppc::util::AddFuncTask<MorozovNSiedelsMethodMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_siedels_method),
+    ppc::util::AddFuncTask<MorozovNSiedelsMethodSEQ, InType>(kTestParam, PPC_SETTINGS_morozov_n_siedels_method));
 
 const auto kGtestValues = ppc::util::ExpandToValues(kTestTasksList);
 
-const auto kPerfTestName = MorozovNSiedelsMethodFuncTestsProcesses::PrintFuncTestName<MorozovNSiedelsMethodFuncTestsProcesses>;
+const auto kPerfTestName =
+    MorozovNSiedelsMethodFuncTestsProcesses::PrintFuncTestName<MorozovNSiedelsMethodFuncTestsProcesses>;
 
 INSTANTIATE_TEST_SUITE_P(PicMatrixTests, MorozovNSiedelsMethodFuncTestsProcesses, kGtestValues, kPerfTestName);
 

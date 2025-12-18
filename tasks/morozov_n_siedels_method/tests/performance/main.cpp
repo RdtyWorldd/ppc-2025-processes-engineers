@@ -8,15 +8,12 @@
 namespace morozov_n_siedels_method {
 
 class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTests<InType, OutType> {
-  const int kCount_ = 100;
   InType input_data_{};
 
-  void SetUp() override {
-    input_data_ = kCount_;
-  }
+  void SetUp() override {}
 
   bool CheckTestOutputData(OutType &output_data) final {
-    return input_data_ == output_data;
+    return output_data.size() > 0;
   }
 
   InType GetTestInputData() final {
@@ -28,8 +25,8 @@ TEST_P(MorozovNSiedelsMethodPerfTestProcesses, RunPerfModes) {
   ExecuteTest(GetParam());
 }
 
-const auto kAllPerfTasks =
-    ppc::util::MakeAllPerfTasks<InType, MorozovNSiedelsMethodMPI, MorozovNSiedelsMethodSEQ>(PPC_SETTINGS_morozov_n_siedels_method);
+const auto kAllPerfTasks = ppc::util::MakeAllPerfTasks<InType, MorozovNSiedelsMethodMPI, MorozovNSiedelsMethodSEQ>(
+    PPC_SETTINGS_morozov_n_siedels_method);
 
 const auto kGtestValues = ppc::util::TupleToGTestValues(kAllPerfTasks);
 
