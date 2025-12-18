@@ -71,21 +71,21 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
     b = std::get<2>(GetInput()).data();
 
     // debug
-    {
-      std::cout << n << "\n";
-      std::cout << "a: " << "\n";
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
-          std::cout << a[i * n + j] << " ";
-        }
-        std::cout << "\n";
-      }
-      std::cout << "b: " << "\n";
-      for (int i = 0; i < n; i++) {
-        std::cout << b[i] << " ";
-      }
-      std::cout << "\n--------------\n";
-    }
+    // {
+    //   std::cout << n << "\n";
+    //   std::cout << "a: " << "\n";
+    //   for (int i = 0; i < n; i++) {
+    //     for (int j = 0; j < n; j++) {
+    //       std::cout << a[i * n + j] << " ";
+    //     }
+    //     std::cout << "\n";
+    //   }
+    //   std::cout << "b: " << "\n";
+    //   for (int i = 0; i < n; i++) {
+    //     std::cout << b[i] << " ";
+    //   }
+    //   std::cout << "\n--------------\n";
+    // }
   }
   MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -119,9 +119,8 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   //     }
   //     std::cout <<"\n--------------\n";
   //   }
+  // std::cout << "rank " << rank << " l_b size: " << send_counts[rank] << "\n";
   // }
-
-  std::cout << "rank " << rank << " l_b size: " << send_counts[rank] << "\n";
 
   std::vector<double> local_b(send_counts[rank]);
   MPI_Scatterv(b, send_counts.data(), displacements.data(), MPI_DOUBLE, local_b.data(), local_b.size(), MPI_DOUBLE, 0,
@@ -165,23 +164,22 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   }
 
   // debug
-  if (rank == 0) {
-    std::cout << "send_size: " << "\n";
-    for (int i = 0; i < mpi_size; i++) {
-      std::cout << send_counts[i] << " ";
-    }
-    std::cout << "\ndisp: " << "\n";
-    for (int i = 0; i < mpi_size; i++) {
-      std::cout << displacements[i] << " ";
-    }
-    std::cout << "\n--------------\n";
-  }
+  // if (rank == 0) {
+  //   std::cout << "send_size: " << "\n";
+  //   for (int i = 0; i < mpi_size; i++) {
+  //     std::cout << send_counts[i] << " ";
+  //   }
+  //   std::cout << "\ndisp: " << "\n";
+  //   for (int i = 0; i < mpi_size; i++) {
+  //     std::cout << displacements[i] << " ";
+  //   }
+  //   std::cout << "\n--------------\n";
+  // }
 
   std::vector<double> x(n, 0);                           // вектор ответа
   std::vector<double> x_new(local_b.size(), 0);          // вектор для рассылки
   std::vector<double> iter_eps(n, -1);                   // вектор погрешности
   std::vector<double> iter_eps_new(local_b.size(), -1);  // вектор для рассылки
-
   do {
     for (int i = 0; i < static_cast<int>(local_b.size()); i++) {
       int g_row = displacement + i;  // позиция строки в общей матрице
@@ -193,14 +191,8 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
       for (int j = g_row + 1; j < n; j++) {
         iter_x = iter_x - local_a[(i * n) + j] * x[j];
       }
-      if (rank == 1) {
-        std::cout << "iter_x : " << iter_x << "\n";
-        std::cout << "local_a[(i * n) + g_row] : " << local_a[(i * n) + g_row] << "\n";
-      }
+
       iter_x = iter_x / local_a[(i * n) + g_row];  // вычисление корня стоящего на диагонали
-      if (rank == 1) {
-        std::cout << "iter_x : " << iter_x << "\n";
-      }
       // обновление погрешности
       iter_eps[g_row] = std::fabs(iter_x - x[g_row]);
       iter_eps_new[i] = iter_eps[g_row];
@@ -210,20 +202,19 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
     }
 
     // debug
-    if (rank == 1) {
-      std::cout << "local iteration rank: " << rank << "\n";
-      for (size_t i = 0; i < local_b.size(); i++) {
-        std::cout << x_new[i] << " ";
-      }
-      std::cout << "\n";
-    }
+    // if (rank == 1) {
+    //   std::cout << "local iteration rank: " << rank << "\n";
+    //   for (size_t i = 0; i < local_b.size(); i++) {
+    //     std::cout << x_new[i] << " ";
+    //   }
+    //   std::cout << "\n";
+    // }
 
     MPI_Allgatherv(x_new.data(), x_new.size(), MPI_DOUBLE, x.data(), send_counts.data(), displacements.data(),
                    MPI_DOUBLE, MPI_COMM_WORLD);
 
     MPI_Allgatherv(iter_eps_new.data(), iter_eps_new.size(), MPI_DOUBLE, iter_eps.data(), send_counts.data(),
                    displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
-
     // debug
     //  if (rank == 0) {
     //    std::cout << "rank: " << rank << " iteration: " << iter_count <<" X:\n";
@@ -236,19 +227,27 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
     //    }
     //    std::cout <<"\n--------\n";
     //  }
+    // debug
+    // if (rank == 0) {
+    //   std::cout << "answer X:\n";
+    //   for (int i = 0; i < n; i++) {
+    //     std::cout << x[i] << " ";
+    //   }
+    //   std::cout << "\n";
+    // }
   } while (InEpsBound(iter_eps, eps));
 
   // debug
-  if (rank == 0) {
-    std::cout << "answer X:\n";
-    for (int i = 0; i < n; i++) {
-      std::cout << x[i] << " ";
-    }
-    std::cout << "\n";
-  }
+  // if (rank == 0) {
+  //   std::cout << "answer X:\n";
+  //   for (int i = 0; i < n; i++) {
+  //     std::cout << x[i] << " ";
+  //   }
+  //   std::cout << "\n";
+  // }
 
   GetOutput() = x;
-  std::cout << "rank:" << rank << " end of calc\n";
+  // std::cout << "rank:" << rank << " end of calc\n";
   if (rank != 0) {
     delete[] a;
     delete[] b;
@@ -262,6 +261,7 @@ bool MorozovNSiedelsMethodMPI::PostProcessingImpl() {
 
 bool MorozovNSiedelsMethodMPI::InEpsBound(std::vector<double> &iter_eps, double correct_eps) {
   double max_in_iter = *(std::max_element(begin(iter_eps), end(iter_eps)));
+  // debug
   // std::cout << max_in_iter << "\n";
   return max_in_iter > correct_eps;
 }

@@ -67,10 +67,10 @@ bool MorozovNSiedelsMethodSEQ::RunImpl() {
     }
   } while (InEpsBound(iter_eps, eps));
 
-  for (size_t i = 0; i < x.size(); i++) {
-    std::cout << x[i] << " ";
-  }
-  std::cout << "\n";
+  // for (size_t i = 0; i < x.size(); i++) {
+  //   std::cout << x[i] << " ";
+  // }
+  // std::cout << "\n";
   GetOutput() = x;
   return true;
 }
