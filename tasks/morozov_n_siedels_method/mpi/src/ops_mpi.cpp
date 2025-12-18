@@ -238,13 +238,14 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   } while (InEpsBound(iter_eps, eps));
 
   // debug
-  // if (rank == 0) {
-  //   std::cout << "answer X:\n";
-  //   for (int i = 0; i < n; i++) {
-  //     std::cout << x[i] << " ";
-  //   }
-  //   std::cout << "\n";
-  // }
+  if (rank == 0) {
+    std::string result = "answer X:\n";
+    for (int i = 0; i < n; i++) {
+      result += std::to_string(x[i]) + " ";
+    }
+    result += '\n';
+    std::cout << result;
+  }
 
   GetOutput() = x;
   // std::cout << "rank:" << rank << " end of calc\n";

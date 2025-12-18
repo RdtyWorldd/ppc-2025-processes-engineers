@@ -17,7 +17,7 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
   InType input_data_;
   std::vector<double> correct_data_;
   double task_eps_ = 0.000001;
-  double global_eps_ = 1e-9;
+  // double global_eps_ = 1e-9;
   int seed_ = 777;
   int n_ = 2000;
 
