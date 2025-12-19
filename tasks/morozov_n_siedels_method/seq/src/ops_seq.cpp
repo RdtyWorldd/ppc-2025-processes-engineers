@@ -1,7 +1,6 @@
 #include "morozov_n_siedels_method/seq/include/ops_seq.hpp"
 
 #include <algorithm>
-#include <numeric>
 #include <tuple>
 #include <vector>
 
@@ -49,7 +48,8 @@ bool MorozovNSiedelsMethodSEQ::RunImpl() {
 
   std::vector<double> x(n, 0);
   std::vector<double> iter_eps(n, -1);
-  do {
+  bool complete = false;
+  while (!complete) {
     for (int i = 0; i < n; i++) {
       double iter_x = b[i];
       for (int j = 0; j < i; j++) {
@@ -65,7 +65,8 @@ bool MorozovNSiedelsMethodSEQ::RunImpl() {
       // обновление полученного корня
       x[i] = iter_x;
     }
-  } while (InEpsBound(iter_eps, eps));
+    complete = !EpsOutOfBound(iter_eps, eps);
+  }
 
   // for (size_t i = 0; i < x.size(); i++) {
   //   std::cout << x[i] << " ";
@@ -79,16 +80,16 @@ bool MorozovNSiedelsMethodSEQ::PostProcessingImpl() {
   return true;
 }
 
-bool MorozovNSiedelsMethodSEQ::InEpsBound(std::vector<double> &iter_eps, double correct_eps) {
-  double max_in_iter = *(std::max_element(begin(iter_eps), end(iter_eps)));
+bool MorozovNSiedelsMethodSEQ::EpsOutOfBound(std::vector<double> &iter_eps, double correct_eps) {
+  double max_in_iter = *std::ranges::max_element(iter_eps);
   return max_in_iter > correct_eps;
 }
 int MorozovNSiedelsMethodSEQ::CalcMatrixRank(int n, int m, std::vector<double> &a) {
-  const double EPS = 1e-9;
+  const double e = 1e-9;
   std::vector<std::vector<double>> mat(n, std::vector<double>(m));
   for (int i = 0; i < n; i++) {
     for (int j = 0; j < n; j++) {
-      mat[i][j] = a[i * n + j];
+      mat[i][j] = a[(i * n) + j];
     }
   }
 
@@ -98,7 +99,7 @@ int MorozovNSiedelsMethodSEQ::CalcMatrixRank(int n, int m, std::vector<double> &
   for (int col = 0; col < n; col++) {
     int pivot_row = -1;
     for (int row = 0; row < n; row++) {
-      if (!row_selected[row] && abs(mat[row][col]) > EPS) {
+      if (!row_selected[row] && abs(mat[row][col]) > e) {
         pivot_row = row;
         break;
       }
@@ -118,7 +119,7 @@ int MorozovNSiedelsMethodSEQ::CalcMatrixRank(int n, int m, std::vector<double> &
 
     // Вычитание текущей строки из других строк
     for (int row = 0; row < n; row++) {
-      if (row != pivot_row && abs(mat[row][col]) > EPS) {
+      if (row != pivot_row && abs(mat[row][col]) > e) {
         double factor = mat[row][col];
         for (int j = col; j < n; j++) {
           mat[row][j] -= factor * mat[pivot_row][j];

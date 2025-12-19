@@ -1,16 +1,14 @@
 #include <gtest/gtest.h>
 #include <stb/stb_image.h>
 
-#include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstddef>
-#include <cstdint>
-#include <numeric>
+#include <fstream>
 #include <random>
 #include <stdexcept>
 #include <string>
 #include <tuple>
-#include <utility>
 #include <vector>
 
 #include "morozov_n_siedels_method/common/include/common.hpp"
@@ -46,14 +44,14 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
 
   bool CheckTestOutputData(OutType &output_data) final {
     // debug
-    if (output_data.size() <= 16) {
-      std::string result;
-      for (std::size_t i = 0; i < output_data.size(); i++) {
-        result += std::to_string(correct_data_[i]) + " ";
-      }
-      result += '\n';
-      std::cout << result;
-    }
+    // if (output_data.size() <= 16) {
+    //   std::string result;
+    //   for (std::size_t i = 0; i < output_data.size(); i++) {
+    //     result += std::to_string(correct_data_[i]) + " ";
+    //   }
+    //   result += '\n';
+    //   std::cout << result;
+    // }
     for (std::size_t i = 0; i < output_data.size(); i++) {
       if (abs((output_data[i] - correct_data_[i])) > task_eps_) {
         return false;
@@ -75,7 +73,7 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
 
   void GenerateTestData(int n, int seed) {
     std::vector<double> x(n, 0.0);
-    std::vector<double> a(n * n, 0.0);
+    std::vector<double> a(static_cast<std::size_t>(n) * n, 0.0);
     std::vector<double> b(n, 0.0);
 
     std::mt19937 gen(seed);
@@ -110,8 +108,6 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
       //  std::cout << "\n";
     }
 
-    std::cout << "\n";
-
     // Вычисляем правую часть
     for (int i = 0; i < n; i++) {
       b[i] = 0.0;
@@ -132,7 +128,7 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
     std::string local = std::get<1>(params) + ".txt";
     std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_siedels_method, local);
     std::ifstream file(abs_path);
-    if (file.is_open() == false) {
+    if (!file.is_open()) {
       throw std::runtime_error("Failed to open file: " + abs_path);
     }
     int n = std::get<0>(params);

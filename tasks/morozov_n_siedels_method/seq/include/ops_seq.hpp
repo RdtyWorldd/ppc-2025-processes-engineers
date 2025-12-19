@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vector>
+
 #include "morozov_n_siedels_method/common/include/common.hpp"
 #include "task/include/task.hpp"
 
@@ -17,8 +19,8 @@ class MorozovNSiedelsMethodSEQ : public BaseTask {
   bool PreProcessingImpl() override;
   bool RunImpl() override;
   bool PostProcessingImpl() override;
-  bool InEpsBound(std::vector<double> &iter_eps, double correct_eps);
-  int CalcMatrixRank(int n, int m, std::vector<double> &a);
+  static bool EpsOutOfBound(std::vector<double> &iter_eps, double correct_eps);
+  static int CalcMatrixRank(int n, int m, std::vector<double> &a);
 };
 
 }  // namespace morozov_n_siedels_method

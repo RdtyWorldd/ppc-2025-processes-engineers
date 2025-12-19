@@ -1,6 +1,5 @@
 #include <gtest/gtest.h>
 
-#include <algorithm>
 #include <cstddef>
 #include <random>
 #include <tuple>
@@ -19,7 +18,7 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
   double task_eps_ = 0.000001;
   // double global_eps_ = 1e-9;
   int seed_ = 777;
-  int n_ = 2000;
+  int n_ = 8000;
 
   void SetUp() override {
     GenerateTestData(n_, seed_);
