@@ -29,7 +29,7 @@ bool MorozovNSiedelsMethodMPI::ValidationImpl() {
     int n = std::get<0>(GetInput());
     std::vector<double> a = std::get<1>(GetInput());
     std::vector<double> b = std::get<2>(GetInput());
-    if ((a.size() == (n * n)) && (b.size() == static_cast<std::size_t>(n))) {
+    if ((a.size() == static_cast<std::size_t>(n * n)) && (b.size() == static_cast<std::size_t>(n))) {
       int rank_a = CalcMatrixRank(n, n, a);
 
       std::vector<double> ext_a;
@@ -97,29 +97,30 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   int displacement = 0;
   for (int i = 0; i < remainder; ++i) {
     send_counts[i]++;
-    displacements[i + 1]++;
   }
 
   displacements[0] = 0;
+  int disp_sum = 0;
   for (int i = 1; i < mpi_size; ++i) {
-    displacements[i] += step * i;
+    disp_sum += send_counts[i - 1];
+    displacements[i] = disp_sum;
   }
   displacement = displacements[rank];
 
-  // //debug
+  // debug
   // {
-  //   if(rank == 0) {
+  //   if (rank == 0) {
   //     std::cout << "send_size: " << "\n";
-  //     for(int i = 0; i < mpi_size; i++) {
+  //     for (int i = 0; i < mpi_size; i++) {
   //       std::cout << send_counts[i] << " ";
   //     }
   //     std::cout << "disp: " << "\n";
-  //     for(int i = 0; i < mpi_size; i++) {
+  //     for (int i = 0; i < mpi_size; i++) {
   //       std::cout << displacements[i] << " ";
   //     }
-  //     std::cout <<"\n--------------\n";
+  //     std::cout << "\n--------------\n";
   //   }
-  // std::cout << "rank " << rank << " l_b size: " << send_counts[rank] << "\n";
+  //   std::cout << "rank " << rank << " l_b size: " << send_counts[rank] << "\n";
   // }
 
   std::vector<double> local_b(send_counts[rank]);

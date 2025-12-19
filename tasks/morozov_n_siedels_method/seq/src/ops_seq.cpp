@@ -20,7 +20,7 @@ bool MorozovNSiedelsMethodSEQ::ValidationImpl() {
   int n = std::get<0>(GetInput());
   std::vector<double> a = std::get<1>(GetInput());
   std::vector<double> b = std::get<2>(GetInput());
-  if ((a.size() == (n * n)) && (b.size() == static_cast<std::size_t>(n))) {
+  if ((a.size() == static_cast<std::size_t>(n * n)) && (b.size() == static_cast<std::size_t>(n))) {
     int rank_a = CalcMatrixRank(n, n, a);
     std::vector<double> ext_a;
     for (int i = 0; i < n; i++) {
