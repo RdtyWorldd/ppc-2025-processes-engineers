@@ -3,10 +3,11 @@
 #include <mpi.h>
 
 #include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <vector>
 
 #include "morozov_n_siedels_method/common/include/common.hpp"
-#include "util/include/util.hpp"
 
 namespace morozov_n_siedels_method {
 
@@ -24,15 +25,15 @@ bool MorozovNSiedelsMethodMPI::ValidationImpl() {
 
   bool matrix_correct = false;
   if (rank == 0) {
-    int n = std::get<0>(GetInput());
+    std::size_t n = std::get<0>(GetInput());
     std::vector<double> a = std::get<1>(GetInput());
     std::vector<double> b = std::get<2>(GetInput());
-    if ((a.size() == static_cast<std::size_t>(n * n)) && (b.size() == static_cast<std::size_t>(n))) {
+    if ((a.size() == (n * n)) && (b.size() == n)) {
       int rank_a = CalcMatrixRank(n, n, a);
-
+      // вычисление расширенной матрицы
       std::vector<double> ext_a;
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < n; j++) {
+      for (std::size_t i = 0; i < n; i++) {
+        for (std::size_t j = 0; j < n; j++) {
           ext_a.push_back(a[(i * n) + j]);
         }
         ext_a.push_back(b[i]);
@@ -62,7 +63,7 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   double *a = nullptr;
   double *b = nullptr;
 
-  int n = 0;
+  std::size_t n = 0;
   if (rank == 0) {
     n = std::get<0>(GetInput());
     a = std::get<1>(GetInput()).data();
@@ -85,14 +86,14 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
     //   std::cout << "\n--------------\n";
     // }
   }
-  MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  MPI_Bcast(&n, 1, MPI_UNSIGNED_LONG, 0, MPI_COMM_WORLD);
 
-  int step = n / mpi_size;
-  int remainder = n % mpi_size;
+  int step = static_cast<int>(n) / mpi_size;
+  int remainder = static_cast<int>(n) % mpi_size;
 
   std::vector<int> send_counts(mpi_size, step);
   std::vector<int> displacements(mpi_size, 0);
-  int displacement = 0;
+  std::size_t displacement = 0;
   for (int i = 0; i < remainder; ++i) {
     send_counts[i]++;
   }
@@ -103,7 +104,7 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
     disp_sum += send_counts[i - 1];
     displacements[i] = disp_sum;
   }
-  displacement = displacements[rank];
+  displacement = static_cast<std::size_t>(displacements[rank]);
 
   // debug
   // {
@@ -135,8 +136,8 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   // }
 
   for (int i = 0; i < mpi_size; i++) {
-    send_counts[i] *= n;
-    displacements[i] *= n;
+    send_counts[i] *= static_cast<int>(n);
+    displacements[i] *= static_cast<int>(n);
   }
 
   // debug
@@ -158,8 +159,8 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
                static_cast<int>(local_a.size()), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 
   for (int i = 0; i < mpi_size; i++) {
-    send_counts[i] /= n;
-    displacements[i] /= n;
+    send_counts[i] /= static_cast<int>(n);
+    displacements[i] /= static_cast<int>(n);
   }
 
   // debug
@@ -182,14 +183,14 @@ bool MorozovNSiedelsMethodMPI::RunImpl() {
   bool complete = false;
   while (!complete) {
     for (std::size_t i = 0; i < local_b.size(); i++) {
-      int g_row = displacement + i;  // позиция строки в общей матрице
-      double iter_x = local_b[i];    // результат на итерации
+      std::size_t g_row = displacement + i;  // позиция строки в общей матрице
+      double iter_x = local_b[i];            // результат на итерации
       // циклы с суммой без элмента диагонали
-      for (int j = 0; j < g_row; j++) {
-        iter_x = iter_x - local_a[(i * n) + j] * x[j];
+      for (std::size_t j = 0; j < g_row; j++) {
+        iter_x = iter_x - (local_a[(i * n) + j] * x[j]);
       }
-      for (int j = g_row + 1; j < n; j++) {
-        iter_x = iter_x - local_a[(i * n) + j] * x[j];
+      for (std::size_t j = g_row + 1; j < n; j++) {
+        iter_x = iter_x - (local_a[(i * n) + j] * x[j]);
       }
 
       iter_x = iter_x / local_a[(i * n) + g_row];  // вычисление корня стоящего на диагонали
@@ -269,11 +270,11 @@ bool MorozovNSiedelsMethodMPI::EpsOutOfBound(std::vector<double> &iter_eps, doub
   return max_in_iter > correct_eps;
 }
 
-int MorozovNSiedelsMethodMPI::CalcMatrixRank(int n, int m, std::vector<double> &a) {
+int MorozovNSiedelsMethodMPI::CalcMatrixRank(std::size_t n, std::size_t m, std::vector<double> &a) {
   const double e = 1e-9;
   std::vector<std::vector<double>> mat(n, std::vector<double>(m));
-  for (int i = 0; i < n; i++) {
-    for (int j = 0; j < n; j++) {
+  for (std::size_t i = 0; i < n; i++) {
+    for (std::size_t j = 0; j < m; j++) {
       mat[i][j] = a[(i * n) + j];
     }
   }
@@ -281,39 +282,49 @@ int MorozovNSiedelsMethodMPI::CalcMatrixRank(int n, int m, std::vector<double> &
   int rank = 0;
   std::vector<bool> row_selected(n, false);
 
-  for (int col = 0; col < n; col++) {
-    int pivot_row = -1;
-    for (int row = 0; row < n; row++) {
-      if (!row_selected[row] && abs(mat[row][col]) > e) {
-        pivot_row = row;
-        break;
-      }
-    }
-    if (pivot_row == -1) {
+  for (std::size_t col = 0; col < n; col++) {
+    std::size_t pivot_row = 0;
+    if (!GetPivotRow(&pivot_row, row_selected, col, mat, e)) {
       continue;
     }
-
     rank++;
     row_selected[pivot_row] = true;
+    // Нормализация строки и вычитание строки из других строк
+    //-> приведение к степнчатому виду
+    SubRow(pivot_row, col, mat, e);
+  }
+  return rank;
+}
 
-    // Нормализация строки
-    double pivot = mat[pivot_row][col];
-    for (int j = col; j < n; j++) {
-      mat[pivot_row][j] /= pivot;
+bool MorozovNSiedelsMethodMPI::GetPivotRow(std::size_t *pivot_row, std::vector<bool> &row_selected, std::size_t col,
+                                           std::vector<std::vector<double>> &mat, double e) {
+  for (std::size_t row = 0; row < mat.size(); row++) {
+    if (!row_selected[row] && std::fabs(mat[row][col]) > e) {
+      *pivot_row = row;
+      return true;
     }
+  }
+  return false;
+}
 
-    // Вычитание текущей строки из других строк
-    for (int row = 0; row < n; row++) {
-      if (row != pivot_row && abs(mat[row][col]) > e) {
-        double factor = mat[row][col];
-        for (int j = col; j < n; j++) {
-          mat[row][j] -= factor * mat[pivot_row][j];
-        }
+void MorozovNSiedelsMethodMPI::SubRow(std::size_t pivot_row, std::size_t col, std::vector<std::vector<double>> &mat,
+                                      double e) {
+  std::size_t n = mat.size();
+  std::size_t m = mat[0].size();
+  // Нормализация строки
+  double pivot = mat[pivot_row][col];
+  for (std::size_t j = col; j < n; j++) {
+    mat[pivot_row][j] /= pivot;
+  }
+  // Вычитание текущей строки из других строк
+  for (std::size_t row = 0; row < n; row++) {
+    if (row != pivot_row && std::fabs(mat[row][col]) > e) {
+      double factor = mat[row][col];
+      for (std::size_t j = col; j < m; j++) {
+        mat[row][j] -= factor * mat[pivot_row][j];
       }
     }
   }
-
-  return rank;
 }
 
 }  // namespace morozov_n_siedels_method

@@ -30,7 +30,7 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
     task_eps_ = std::get<2>(params);
     if (std::get<1>(params) == "gen") {
-      int n = std::get<0>(params);
+      std::size_t n = std::get<0>(params);
       GenerateTestData(n, seed_);
     } else {
       GetTestFromFile(params);
@@ -71,16 +71,16 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
   // double global_eps_ = 1e-9;
   int seed_ = 777;
 
-  void GenerateTestData(int n, int seed) {
+  void GenerateTestData(std::size_t n, int seed) {
     std::vector<double> x(n, 0.0);
-    std::vector<double> a(static_cast<std::size_t>(n) * n, 0.0);
+    std::vector<double> a(n * n, 0.0);
     std::vector<double> b(n, 0.0);
 
     std::mt19937 gen(seed);
     std::uniform_real_distribution<double> dist_coeff(0.0, 1.0);
     std::uniform_real_distribution<double> dist_solution(-10.0, 10.0);
 
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       x[i] = dist_solution(gen);
     }
 
@@ -91,15 +91,15 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
     //  std::cout << "\n\n";
 
     // Генерируем матрицу с диагональным преобладанием
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       double row_sum = 0.0;
-      for (int j = 0; j < n; j++) {
+      for (std::size_t j = 0; j < n; j++) {
         if (i != j) {
-          a[i * n + j] = dist_coeff(gen);
-          row_sum += std::abs(a[i * n + j]);
+          a[(i * n) + j] = dist_coeff(gen);
+          row_sum += std::abs(a[(i * n) + j]);
         }
       }
-      a[i * n + i] = row_sum + 1.0 + dist_coeff(gen);  // гарантируем преобладание
+      a[(i * n) + i] = row_sum + 1.0 + dist_coeff(gen);  // гарантируем преобладание
 
       // debug
       //  for (int j = 0; j < n; j++) {
@@ -109,10 +109,10 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
     }
 
     // Вычисляем правую часть
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       b[i] = 0.0;
-      for (int j = 0; j < n; j++) {
-        b[i] += a[i * n + j] * x[j];
+      for (std::size_t j = 0; j < n; j++) {
+        b[i] += a[(i * n) + j] * x[j];
       }
     }
     // debug
@@ -131,17 +131,17 @@ class MorozovNSiedelsMethodFuncTestsProcesses : public ppc::util::BaseRunFuncTes
     if (!file.is_open()) {
       throw std::runtime_error("Failed to open file: " + abs_path);
     }
-    int n = std::get<0>(params);
+    std::size_t n = std::get<0>(params);
     std::vector<double> x(n, 0);
     std::vector<double> a(n * n, 0);
     std::vector<double> b(n, 0);
-    for (int i = 0; i < n * n; i++) {
+    for (std::size_t i = 0; i < n * n; i++) {
       file >> a[i];
     }
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       file >> b[i];
     }
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       file >> x[i];
     }
 

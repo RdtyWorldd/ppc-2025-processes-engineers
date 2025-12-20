@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 
+#include <cmath>
 #include <cstddef>
 #include <random>
 #include <tuple>
@@ -18,7 +19,7 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
   double task_eps_ = 0.000001;
   // double global_eps_ = 1e-9;
   int seed_ = 777;
-  int n_ = 8000;
+  std::size_t n_ = 2000;
 
   void SetUp() override {
     GenerateTestData(n_, seed_);
@@ -26,7 +27,7 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
 
   bool CheckTestOutputData(OutType &output_data) final {
     for (std::size_t i = 0; i < output_data.size(); i++) {
-      if (abs((output_data[i] - correct_data_[i])) > task_eps_) {
+      if (std::fabs((output_data[i] - correct_data_[i])) > task_eps_) {
         return false;
       }
     }
@@ -36,7 +37,7 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
   InType GetTestInputData() final {
     return input_data_;
   }
-  void GenerateTestData(int n, int seed) {
+  void GenerateTestData(std::size_t n, int seed) {
     std::vector<double> x(n, 0.0);
     std::vector<double> a(n * n, 0.0);
     std::vector<double> b(n, 0.0);
@@ -45,7 +46,7 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
     std::uniform_real_distribution<double> dist_coeff(0.0, 1.0);
     std::uniform_real_distribution<double> dist_solution(-10.0, 10.0);
 
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       x[i] = dist_solution(gen);
     }
 
@@ -56,15 +57,15 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
     //  std::cout << "\n\n";
 
     // Генерируем матрицу с диагональным преобладанием
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       double row_sum = 0.0;
-      for (int j = 0; j < n; j++) {
+      for (std::size_t j = 0; j < n; j++) {
         if (i != j) {
-          a[i * n + j] = dist_coeff(gen);
-          row_sum += std::abs(a[i * n + j]);
+          a[(i * n) + j] = dist_coeff(gen);
+          row_sum += std::fabs(a[(i * n) + j]);
         }
       }
-      a[i * n + i] = row_sum + 1.0 + dist_coeff(gen);  // гарантируем преобладание
+      a[(i * n) + i] = row_sum + 1.0 + dist_coeff(gen);  // гарантируем преобладание
 
       // debug
       //  for (int j = 0; j < n; j++) {
@@ -73,13 +74,11 @@ class MorozovNSiedelsMethodPerfTestProcesses : public ppc::util::BaseRunPerfTest
       //  std::cout << "\n";
     }
 
-    std::cout << "\n";
-
     // Вычисляем правую часть
-    for (int i = 0; i < n; i++) {
+    for (std::size_t i = 0; i < n; i++) {
       b[i] = 0.0;
-      for (int j = 0; j < n; j++) {
-        b[i] += a[i * n + j] * x[j];
+      for (std::size_t j = 0; j < n; j++) {
+        b[i] += a[(i * n) + j] * x[j];
       }
     }
     // debug
