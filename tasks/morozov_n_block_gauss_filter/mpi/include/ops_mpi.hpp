@@ -22,9 +22,13 @@ class MorozovNBlockGaussFilterMPI : public BaseTask {
   bool PostProcessingImpl() override;
 
   const float kernel[3][3] = {{1.0f, 2.0f, 1.0f}, {2.0f, 4.0f, 2.0f}, {1.0f, 2.0f, 1.0f}};
-  Color CalculatePixelColor(std::vector<uint8_t> &src, int x, int y, int width, int height);
-  std::vector<Tile> ParseImageToTiles(std::vector<uint8_t> &src, int width, int height, 
-    int rows, int cols, int tile_w, int tile_h);
+  Color CalculatePixelColor(uint8_t *src, int x, int y, int width, int height);
+  std::tuple<std::vector<uint8_t>, std::vector<int>> ParseImageToTiles(std::vector<uint8_t> &src, int width, int height,
+                                                                       int rows, int cols, int tile_w, int tile_h);
+  int CalculateTileSize(std::vector<uint8_t> &src, int width, int height, int mpi_size);
+  int GetTileColsRowsCount(int src_wh, int tile_wh);
+  int GetTilesDataSize(std::vector<int> &shifts, int tile_start_id, int tiles_count);
+  void ScatterTiles(std::vector<uint8_t> &tiles_imgs, std::vector<int> &shifts, int mpi_size);
   void SendTiles();
 };
 

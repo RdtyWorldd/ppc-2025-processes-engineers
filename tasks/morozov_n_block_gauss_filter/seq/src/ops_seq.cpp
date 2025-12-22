@@ -30,9 +30,9 @@ bool MorozovNBlockGaussFilterSEQ::RunImpl() {
   std::vector<uint8_t> src = std::get<0>(GetInput());
 
   std::vector<uint8_t> res(src.size(), 0);
-  for(int x = 0; x < width; x++) {
-    for(int y = 0; y < height; y++) {
-      Color new_color =  CalculatePixelColor(src, x, y, height, width);
+  for(int y = 0;y < height ; y++) {
+    for(int x = 0; x < width; x++) {
+      Color new_color =  CalculatePixelColor(src, x, y, width, height);
       res[3 * ((y * width) + x) + 0] = new_color.r;
       res[3 * ((y * width) + x) + 1] = new_color.g;
       res[3 * ((y * width) + x) + 2] = new_color.b;
