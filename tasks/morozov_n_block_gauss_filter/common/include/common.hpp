@@ -24,7 +24,7 @@ struct Tile {
     std::vector<uint8_t> img;
 };
 
-using InType = std::tuple<std::vector<uint8_t>, std::size_t, std::size_t>;
+using InType = std::tuple<std::vector<uint8_t>, int, int>;
 using OutType = std::vector<uint8_t>;
 using TestType = std::tuple<int, std::string, double>;
 using BaseTask = ppc::task::Task<InType, OutType>;

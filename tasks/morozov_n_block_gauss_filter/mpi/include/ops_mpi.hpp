@@ -25,11 +25,13 @@ class MorozovNBlockGaussFilterMPI : public BaseTask {
   Color CalculatePixelColor(uint8_t *src, int x, int y, int width, int height);
   std::tuple<std::vector<uint8_t>, std::vector<int>> ParseImageToTiles(std::vector<uint8_t> &src, int width, int height,
                                                                        int rows, int cols, int tile_w, int tile_h);
-  int CalculateTileSize(std::vector<uint8_t> &src, int width, int height, int mpi_size);
+  int CalculateTileSize(int width, int height, int mpi_size);
   int GetTileColsRowsCount(int src_wh, int tile_wh);
   int GetTilesDataSize(std::vector<int> &shifts, int tile_start_id, int tiles_count);
-  void ScatterTiles(std::vector<uint8_t> &tiles_imgs, std::vector<int> &shifts, int mpi_size);
+  void ScatterTiles(std::vector<int> &proc_tile_count,std::vector<uint8_t> &tiles_imgs, std::vector<int> &shifts, int mpi_size);
   void SendTiles();
+
+  void print_pic(int h, int w, int c, uint8_t *img);
 };
 
 }  // namespace morozov_n_block_gauss_filter

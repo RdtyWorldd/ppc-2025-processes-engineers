@@ -22,7 +22,7 @@ class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfT
   std::size_t n_ = 2000;
 
   void SetUp() override {
-    GenerateTestData(n_, seed_);
+    //GenerateTestData(n_, seed_);
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
@@ -87,7 +87,7 @@ class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfT
     // }
     // std::cout << "\n\n";
 
-    input_data_ = std::make_tuple(n, a, b, task_eps_);
+    //input_data_ = std::make_tuple(n, a, b, task_eps_);
     correct_data_ = x;
   }
 };
