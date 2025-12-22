@@ -30,9 +30,9 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
     std::vector<uint8_t> img(5 * 5 * 3, 0);
     int count = 0;
-    for(int i = 0; i < 5; i++) {
-      for(int j = 0; j < 5; j++) {
-        for(int k = 0; k < 3; k++) {
+    for (int i = 0; i < 5; i++) {
+      for (int j = 0; j < 5; j++) {
+        for (int k = 0; k < 3; k++) {
           img[3 * ((i * 5) + j) + k] = count;
           count++;
         }
@@ -70,8 +70,8 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
   // double global_eps_ = 1e-9;
   int seed_ = 777;
 
-  //void GenerateTestData(std::size_t n, int seed) {}
-  //void GetTestFromFile(TestType &params) {}
+  // void GenerateTestData(std::size_t n, int seed) {}
+  // void GetTestFromFile(TestType &params) {}
 };
 
 namespace {

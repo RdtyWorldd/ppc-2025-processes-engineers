@@ -10,18 +10,17 @@
 
 namespace morozov_n_block_gauss_filter {
 
-void MorozovNBlockGaussFilterSEQ::print_pic(int h, int w, int c, uint8_t* img) {
-  for(int i = 0; i < h; i++) {
-    for(int j = 0; j < w; j++) {
-       for(int k = 0; k < c; k++) {
-        std::cout << (int)img[3 *((i * w) +j) + k] << " ";
+void MorozovNBlockGaussFilterSEQ::print_pic(int h, int w, int c, uint8_t *img) {
+  for (int i = 0; i < h; i++) {
+    for (int j = 0; j < w; j++) {
+      for (int k = 0; k < c; k++) {
+        std::cout << (int)img[3 * ((i * w) + j) + k] << " ";
       }
       std::cout << "| ";
     }
     std::cout << "\n";
- }
+  }
 }
-
 
 MorozovNBlockGaussFilterSEQ::MorozovNBlockGaussFilterSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
@@ -42,9 +41,9 @@ bool MorozovNBlockGaussFilterSEQ::RunImpl() {
   std::vector<uint8_t> src = std::get<0>(GetInput());
 
   std::vector<uint8_t> res(src.size(), 0);
-  for(int y = 0; y < height ; y++) {
-    for(int x = 0; x < width; x++) {
-      Color new_color =  CalculatePixelColor(src, x, y, width, height);
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      Color new_color = CalculatePixelColor(src, x, y, width, height);
       res[3 * ((y * width) + x) + 0] = new_color.r;
       res[3 * ((y * width) + x) + 1] = new_color.g;
       res[3 * ((y * width) + x) + 2] = new_color.b;
@@ -60,8 +59,8 @@ bool MorozovNBlockGaussFilterSEQ::PostProcessingImpl() {
   return true;
 }
 
-Color MorozovNBlockGaussFilterSEQ::CalculatePixelColor(std::vector<uint8_t> src, int x, int y, int width , int height) {
- Color res{0, 0, 0};
+Color MorozovNBlockGaussFilterSEQ::CalculatePixelColor(std::vector<uint8_t> src, int x, int y, int width, int height) {
+  Color res{0, 0, 0};
   float r = 0.0f;
   float g = 0.0f;
   float b = 0.0f;
