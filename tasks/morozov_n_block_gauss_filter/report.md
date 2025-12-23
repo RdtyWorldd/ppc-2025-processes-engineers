@@ -1,204 +1,210 @@
-# Итерационные Методы. Метод Зейделя
+# Линейная фильтрация изображений (блочное разбиение). Ядро Гаусса 3x3.
 
 - **Студент**: Морозов Никита Александрович, группа 3823Б1ПР1
 - **Технология**: SEQ | MPI
-- **Вариант**: 25
+- **Вариант**: 28
 
 ## 1. Введение
-В мире есть множество задач решение которых сводится к решению систем линейных алгебраических уравнений. Умение решать таких систем один из основных навыков в математике. Существует несколько подходов к решению данных систем: классические методы и численные методы.
+Обработка изображений одна из популярных работ производимых при помощи компьютеров. Но пользователи не задумываются о внутренней работе алгоритмов, им важен результат и скорость работы обработки.
 
-Классические методы (Матричный, Крамера, Гауса) дают точный ответ, но к сожалению требуют большого количества вычислений. Численные методы позволяют ускорить вычисления получить ответ с определенной, рассчитываемой погрешностью за счет дополнительных ограничений.
+Одна из задач данной сфере - фильтрация изображений. Существует множество различных фильтров, один из самых популярных - фильтр Гаусса. 
 
-Иттерационные методы - это численные методы в которых рассчет конкретного значения разбивается на итерации. На каждой следующей итерации погрещность уменьшается, результат становится более точным.
+Обработка больших изображений может занимать долгое время, один из придуманных способов ускорить этот процесс - блочное разбиение (tiling).
 
-Цель моей работы - реализовать итерационый метод Зейделя, распараллелить его работу при помощи MPI.
+Цель моей работы - реализовать фильтр Гауса с ядром 3х3, алгоритм разбиения изображения на блоки,распараллелить фильтрацию при помощи MPI.
 
 ## 2. Постановка задачи
-Дана система линейных алгебраических уравнений вида: `Ax = B` и параметр `Eps`
+На вход программе подается изображение `img` и его характеристики: ширина - `width` и выосота - `height`
+- `img` - матрица коэфициентов неизвестных размера `n * n`
+- `width` - вектор неизвестных размера `n`
+- `height` - вектор свободных членов размера `n`
 
-- `A` - матрица коэфициентов неизвестных размера `n * n`
-- `x` - вектор неизвестных размера `n`
-- `B` - вектор свободных членов размера `n`
-- `Eps` - максимальное значение (абсолютной) погрешности
-
-Требуется решить систему уравнений при помощи метода Зейделя - получить значения вектора `x` с максимальной погрешностью `Eps`, то есть если известно точное решение `x*`, то максимальный элемент из разницы векторов `x* - x`, по модулю должен быть <= `Eps`.
+Требуется сгладить изображение применив фильтр Гауса с ядром размера `3х3`.
 
 Тип входных данных:
 ```cpp
-using InType = std::tuple<int /* n */, 
-               std::vector<double> /* A */, 
-               std::vector<double> /* B */, 
-               double /* Eps */>;
+using InType = std::tuple<std::vector<uint8_t>, int, int>;
+using OutType = std::vector<uint8_t>;
+using TestType = std::tuple<std::string, int, int>;
+using BaseTask = ppc::task::Task<InType, OutType>;
 ```
 
 Тип выходных данных:
 ```cpp
-using OutType = std::vector<double>;
+using OutType = std::vector<uint8_t>;
 ```
-Ограничения:
-- Входная система уравнений должна быть решаема
-- Матрица `A` должна иметь диагональное преобладание
 
 ## 3. Базовый алгоритм (последовательная версия) 
-Алгоритм представляет следующую последовательность шагов:
-1. Приведение системы уравнений `Ax = B` в вид `Ex = Cx + D` (`E` - единичная матрица)
-2. Выбор начальных значений `X0` (традиционно все элементы вектора равны 0)
-3. Организуется итерационный процесс: (Здесь и далее x Число - номер в векторе X, [Число] - номер итерации )
+Алгоритм фильтрации представляет собой проход по всем пикселям изображения с вычислением нового цвета по следующему правилу:
+1. инициализируется цикл прохода по каждому пикселю с радиусом заданного ядра, вокруг выбранного пикселя
+2. значение каждого цвета пикселя умножается на соответвующий позиции элемент ядра
+3. полученные значения аккумулируются
+4. по оконачии цикла каждое значение проверяется на допустимость значений и сохраняется в новый пиксель
 
-    `xk [m+1] = ck1*x1 [m] + ck2*x2 [m] + ... + ckn *xn [m]`
-    
-    Если для данной итерации [m+1] известны более ранние x из правой части, то подставляем их.
+Код Алгоритма вычисление цвета нового пикселя:
+``` cpp
+  float kernel_sum = 16.0f;
+  float kernel_inv = 1.0f / kernel_sum;
 
-    Пример: 
-    `x1 [1] = c11*x1 [0] + c12*x2 [0] + ... + c1n *xn [0]`
+  float r = 0.0f;
+  float g = 0.0f;
+  float b = 0.0f;
 
-    `x2 [1] = c11*x1 [1] + c12*x2 [0] + ... + c1n *xn [0]`
-    Итак далее
-4. Рассчитываем погрешность: `Eps = max(abs(X[m+1] - X[m]))` - находим максимальный элемент разницы векторов
-5. Если `Eps` > заданного задачей повторяем итерацию
-
-Код Алгоритма:
-```cpp
-  std::vector<double> x(n, 0);
-  std::vector<double> iter_eps(n, -1);
-  do {
-    for (int i = 0; i < n; i++) {
-      double iter_x = b[i];
-      for (int j = 0; j < i; j++) {
-        iter_x = iter_x - a[(i * n) + j] * x[j];
-      }
-      for (int j = i + 1; j < n; j++) {
-        iter_x = iter_x - a[(i * n) + j] * x[j];
-      }
-      iter_x = iter_x / a[(i * n) + i];
-
-      // обновление погрешности
-      iter_eps[i] = std::fabs(iter_x - x[i]);
-      // обновление полученного корня
-      x[i] = iter_x;
+  for (int l = -rad_y; l <= rad_y; l++) {
+    for (int k = -rad_x; k <= rad_x; k++) {
+      int idX = std::clamp(x + k, 0, width - 1);
+      int idY = std::clamp(y + l, 0, height - 1);
+      int pix_id = 3 * ((idY * width) + idX);
+      float kernel_val = kernel[l + rad_y][k + rad_x] * kernel_inv;
+      r += static_cast<float>(src[pix_id + 0]) * kernel_val;
+      g += static_cast<float>(src[pix_id + 1]) * kernel_val;
+      b += static_cast<float>(src[pix_id + 2]) * kernel_val;
     }
-  } while (EpsOutOfBound(iter_eps, eps));
+  }
+
+  Color res;
+  res.r = std::clamp(static_cast<uint8_t>(r), ch_min, ch_max);
+  res.g = std::clamp(static_cast<uint8_t>(g), ch_min, ch_max);
+  res.b = std::clamp(static_cast<uint8_t>(b), ch_min, ch_max);
+```
+
+Код Алгоритма Фильтрации:
+```cpp
+ std::vector<uint8_t> res(width * height * 3, 0);
+  for (int y = 0; y < height; y++) {
+    for (int x = 0; x < width; x++) {
+      Color new_color = CalculatePixelColor(src, x, y, width, height);
+      int pix_idx = 3 * ((y * width) + x);
+      res[pix_idx + 0] = new_color.r;
+      res[pix_idx + 1] = new_color.g;
+      res[pix_idx + 2] = new_color.b;
+    }
+  }
 ```
 
 **Характеристики:**
-Оценить временную сложноть алгоритма достаточно сложно, так как все зависит от входных данных. Если значения матрицы `A` обеспечивают высокую сходимость, то сложность алгоритма составляет `O(N)`. В противных случая алгоритм может выполняться большее число итераций.
+Сложность алгоритма равна O(M * N * (k * k)), где:
+- `M` - ширина изображения
+- `N` - высота изображения
+- `k` - размер ядра 
 
 ## 4. Схема распараллеливания
 
-Основной проблемой распараллеливания Метода Зейделя являеется то, что на каждой итерации используются обновленные значения, если они доступны. Прямая реализация превращает параллельный алгоритм в последовательный.
-
-Наиболее распространненый подход параллелизации - **Блочное разбиение**. Система разделяется на блоки между всеми процессами. Каждый процесс обрабатывает матрицу на своем участке при помощи Метода Зейделя, в конце итерации происходит синхронизация.
+Для распараллеливания алгоритма, изображение разбивается на части, каждая часть обрабатывается своим процессом. Один из типов разбиения - **блочное** подразумевает, что изображение разбивается на равные участки, учаастки равномерно распределяются между всеми процессами. После фильтрации всех участков изображения, оно собирается обратно.
 
 ### 4.1 Алгоритм Распределения
-
-**Код**
-```cpp
-int rank = 0;
-  int mpi_size = 0;
-  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
-
-  double *a = 0;
-  double *b = 0;
-
-  int n = 0;
-  if (rank == 0) {
-    n = std::get<0>(GetInput());
-    a = std::get<1>(GetInput()).data();
-    b = std::get<2>(GetInput()).data();
-  }
-  MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
-  int step = n / mpi_size;
-  int remainder = n % mpi_size;
-
-  std::vector<int> send_counts(mpi_size, step);
-  std::vector<int> displacements(mpi_size, 0);
-  //расчет смещений и количества отправленных
-  //для разделения вектора B всем процессам
-  std::vector<double> local_b(send_counts[rank]);
-  MPI_Scatterv(b, send_counts.data(), displacements.data(), MPI_DOUBLE, local_b.data(), local_b.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
-  //расчет смещений и количества отправленных
-  //для разделения матрицы B всем процессам
-  std::vector<double> local_a(send_counts[rank]);
-  MPI_Scatterv(a, send_counts.data(), displacements.data(), MPI_DOUBLE, local_a.data(), local_a.size(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
-```
-
-**Описание**
+Алгоритм распределения состоит из нескольких этапов
 1. Процессы узнаю свой ранг и кол-во процессов исполняющих программу
 2. Процесс с `рангом 0` получает входные данные
-3. Все процессы расчитывают кол-во данных, получаемых от 0 процесса, и их смещения относительно исходного вектора 
-4. Происходит распредление данных при помощи операции `MPI_Scatterv()` 
+3. Вычисление размера тайла
+4. Получение числа строк и столбцов, на которые тайлы разобьют изображение
+5. Вычисление общего числа тайлов
+6. Подсчет количества тайлов для каждого процесса
+7. Получение информации о тайле (размеры, пиксели из исходного изображения, позиция)
+8. Распределение с между всеми процессами
+
+Код алгоритмов рассчета информации о тайлах представен в приложении [1, 2, 3]
+
+**Код Алгоритма распредления**
+```cpp
+if(rank == 0) {
+  //вычисление данных о тайлах
+  ScatterTiles(proc_tile_count, tiles_data, tiles_attr, mpi_size);
+} else { 
+  //получение данных на остальных потоках
+  MPI_Recv(&tiles_count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  tiles_attr.resize(tiles_count * 6);
+  MPI_Recv(tiles_attr.data(), static_cast<int>(tiles_attr.size()), MPI_INT, 0, 1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+  tiles_data_size = GetTilesDataSize(tiles_attr, 0, tiles_count);
+  tiles_data.resize(tiles_data_size);
+  MPI_Recv(tiles_data.data(), tiles_data_size, MPI_BYTE, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+}
+
+//Алгоритм распрделения
+void MorozovNBlockGaussFilterMPI::ScatterTiles(const std::vector<int> &proc_tile_count,
+                                               const std::vector<uint8_t> &tiles_imgs, const std::vector<int> &shifts,
+                                               int mpi_size) {
+  int img_displ = GetTilesDataSize(shifts, 0, proc_tile_count[0]);
+  int tile_displ = proc_tile_count[0];
+
+  const int req_size = (mpi_size - 1) * 3;
+  std::vector<MPI_Request> requests(req_size);
+  std::vector<MPI_Status> statuses(req_size);
+
+  for (int i = 1; i < mpi_size; i++) {
+    int req_ind = (i - 1) * 3;
+    MPI_Isend(&proc_tile_count[i], 1, MPI_INT, i, 0, MPI_COMM_WORLD, &requests[req_ind]);
+
+    int shifts_displ = tile_displ * 6;
+    int shifts_send_count = proc_tile_count[i] * 6;
+    MPI_Isend(shifts.data() + shifts_displ, shifts_send_count, MPI_INT, i, 1, MPI_COMM_WORLD, &requests[req_ind + 1]);
+
+    int img_send_count = GetTilesDataSize(shifts, tile_displ, proc_tile_count[i]);
+    MPI_Isend(tiles_imgs.data() + img_displ, img_send_count, MPI_BYTE, i, 2, MPI_COMM_WORLD, &requests[req_ind + 2]);
+
+    tile_displ += proc_tile_count[i];
+    img_displ += img_send_count;
+  }
+
+  MPI_Waitall(req_size, requests.data(), statuses.data());
+}
+```
+
 
 ## 4.2 Алгоритм Подсчета
+Алгоритм подсчета абсолютно индентичен последовательной версии за исключением того, что он производится для каждого тайла на процессе
+
 **Код**
 ```cpp
-  std::vector<double> x(n, 0);                           // вектор ответа
-  std::vector<double> x_new(local_b.size(), 0);          // вектор для рассылки
-  std::vector<double> iter_eps(n, -1);                   // вектор погрешности
-  std::vector<double> iter_eps_new(local_b.size(), -1);  // вектор для рассылки
-  do {
-    for (int i = 0; i < static_cast<int>(local_b.size()); i++) {
-      int g_row = displacement + i;  // позиция строки в общей матрице
-      double iter_x = local_b[i];    // результат на итерации
-      // циклы с суммой без элмента диагонали
-      for (int j = 0; j < g_row; j++) {
-        iter_x = iter_x - local_a[(i * n) + j] * x[j];
-      }
-      for (int j = g_row + 1; j < n; j++) {
-        iter_x = iter_x - local_a[(i * n) + j] * x[j];
-      }
-      iter_x = iter_x / local_a[(i * n) + g_row];  // вычисление корня стоящего на диагонали
-      // обновление погрешности
-      iter_eps[g_row] = std::fabs(iter_x - x[g_row]);
-      iter_eps_new[i] = iter_eps[g_row];
-      // обновление полученного корня
-      x[g_row] = iter_x;
-      x_new[i] = iter_x;
-    }
-    MPI_Allgatherv(x_new.data(), x_new.size(), MPI_DOUBLE, x.data(), send_counts.data(), displacements.data(),  MPI_DOUBLE, MPI_COMM_WORLD);
-    MPI_Allgatherv(iter_eps_new.data(), iter_eps_new.size(), MPI_DOUBLE, iter_eps.data(), send_counts.data(), displacements.data(), MPI_DOUBLE, MPI_COMM_WORLD);
-  } while (InEpsBound(iter_eps, eps));
+for(int k = 0; k < tiles_count; k++) {
+  //получение аттрибутов тайла
+  //подсчет фильтра для тайла
+  //сохранение обработанного блока
+}
 ```
-**Описание**
-Каждый процесс выполнеят на своем участке итерации метода Зейделя, в конце каждой итерации происходит синхронизация - получение и отправка посчитанных результатов и погрешности на своем участке при помощи MPI_Allgather()
+Код алгоритма в приложении `[5]`
 
 ## 4.3 Получение конечного результата
-В конце каждой итерации происходит синхронизация, следовательно, когда завершится подсчет все процессы всегда будут значть итоговый результат.
+По окончании фильтрации каждым процессам, все обработанные участки пересылаются на процесс с `рангом 0` при помощи `MPI_Gatherv()`.
+Как только все данные им получены начианется алгоритм слияния тайлов в единое изображение.
+
+**Описание алгоритма слияния**
+1. Начинается обход по строкам на которые разбилось изображение
+2. Каждый блок, входящий в строку, записывает свои данные в новое изображение   
+
+Код алгоритма в приложении [6]
 
 ## 4.4 Схема работы программы
 ```
 ┌──────────────────────────────────────────────────────────┐
-│  Входные данные ( матрицы A, вектор В, погрешность Eps)  │
+│  Входные данные   (Изображение и его размеры)           │
 └────────┬─────────────────────────────────────────────────┘
          │ (передача входных аргументов программе)
          ↓
- ┌─────────────────────┬──────────────────────┬────────────────────────┐
- │  Процесс 0          │  Процесс 1           │  Процесс 2             │  
- │ получает входные    │ Рассчитывает индексы | Рассчитывает индексы   |
- | данные              | для получения данных | для получения данных   |
- └───────┬─────────────┴──────────────────────┴────────────────────────┘
-         │ передача данных MPI_Scatter
+ ┌──────────────────────┬──────────────────────┬────────────────────────┐
+ │  Процесс 0           │  Процесс 1           │  Процесс 2             │  
+ │ получает входные     │ Ждут данных от       | Ждут данных от         |
+ | данные, разбивает    | нулевого             |             нулевого   |
+ | изображение на блоки |                      |                        |
+ └───────┬──────────────┴──────────────────────┴────────────────────────┘
+         │ передача данных MPI_Isend, MPI_Recv
          ↓
  ┌────────────────┬────────────────┬────────────────┐
- │ local_a(0)     │ local_a(1)     │ local_a(2)     │
- | local_b(0)     │ local_b(1)     │ local_b(1)     │
+ │ Фильтрация     │ Фильтрация     │ Фильтрация     │
+ |  тайлов        │ тайлов         │  тайлов        │
  └───────┬────────┴────────────────┴────────────────┘
-         │ локальное вычислени итерации  <--------------------+
-         ↓                                                    |
- ┌───────────────┬─────────────────┬─────────────────┐        | 
- │    new_x(0)   │    new_x(1)     │    new_x(2)     │        |
- |   new_eps(0)  |   new_eps(1)    |   new_eps(2)    |        |
- └───────┬───────┴─────────────────┴─────────────────┘        |
-         │ MPI_Allgather()  синхронизация                     |
-         ↓                                                    |
-┌───────────────────────────────────┐                         |
-│   Проверка значения погрешности   │-------------------------+
-└────────┬──────────────────────────┘
-         │ Погрешность <= Заданной начальными условиями
+         │ Отправка данных на процесс 0, MPI_Gatherv()
+         ↓                                                    
+ ┌────────────────────────────────────────────────┐         
+ │   Сбор результирующиего изображения из блоков  |
+ |    на процессе с рангом 0                      |
+ └───────┬────────────────────────────────────────┘        
+         │ MPI_Bcast()  рассылка результата                    
+         ↓                                                    
+         │ 
          ↓
 ┌───────────────────────────────────────┐  
-│  Сохранение: GetOutput() = X          │
+│  Сохранение: GetOutput() = new_img    │
 └───────────────────────────────────────┘
 ```
 
@@ -225,9 +231,9 @@ int rank = 0;
 Тестовые данные: 
 1. Функциональные тесты: 
     - тестовые данные из фалов
-    - сгенерированные системы с числом неизвестных: 4, 16
+    - сгенерированные изображения
 2. Перформанс тесты:
-    - сгенерированныя системы с числом неизвестных
+    - сгенериорванные изображения больших размеров
 
 ## 7. Результаты и обсуждение
 
@@ -235,89 +241,232 @@ int rank = 0;
 Функциональные тесты используют входные файлы или генерацию в зависимости от параметра теста.
 
 Струкутра параметра теста:
-- число неизвестных
-- строка 
-Тест считывает второй аргумент параметра и, если он не равен `"gen"`, 
-считывает входной файл, в котором хранятся: матрица `A`, вектор `B`, вектор ответов `X`.
+- строка
+- ширина изображения (только для генерации)
+- высота изображения (только для генерации)
+
+Тест считывает первый аргумент параметра и, если он не равен `"gen"`, 
+считывает входной файл, в котором хранятся: тестовое изображение
 Входные файлы имеют следующие наименования:
 ```
-test_1.txt
-test_2.txt
+img_1.jpg
+img_2.jpg
 ...
 ```
-Если тест во втором аргументе параметра считал строку `"gen"`, то система уравнений будет 
-сгенерирована с количеством неизвестных из первого параметра
+Если тест во втором аргументе параметра считал строку `"gen"`, то тестовое изображение будет сгенерированно с заданнами размерами.
 
-Обе реализации (`SEQ`, `MPI`) прошли все тесты успешно.
+Корректность работы теста проверяется только для параллельной версии. Тест пройден успешно, если выходные данные равны выхдным данным последовательного алгоритма
 
 ### 7.2 Производительность
 
-Количество неизвечтных `2000`
+Размер генерируемого изображения для теста `2000 x 2000`
 | Mode        | Count | Time, s | Speedup | Efficiency |
 |-------------|-------|---------|---------|------------|
-| seq         | 1     | 0.06    | 1.00    | N/A        |
-| omp         | 2     | 0.06    | 1.00    | 50%        |
-| omp         | 4     | 0.06    | 1.00    | 25%        |
+| seq         | 1     | 0.041   | 1.00    | N/A        |
+| MPI         | 2     | 0.041   | 1.00    | 50%        |
+| MPI         | 4     | 0.024   | 1.71    | 42%        |
 
-Количество неизвечтных `5000`
-| Mode        | Count | Time, s | Speedup | Efficiency |
-|-------------|-------|---------|---------|------------|
-| seq         |  1    |  0.64   | 1.00    | N/A        |
-| omp         |  2    |  0.354  | 1.81    | 90.5%      |
-| omp         |  4    |  0.412  | 1.56    | 38.8%      |
-
-Тесты Производительности выполнялись без pipeline тестов, так как для матриц 3000х3000 элементов, время выполнения на моей установке, превышало лимит.
-
-Результаты тестов показывают, что для более корректной оценки нужна система большего размера, так как операции взаимодействия процессов забирают достаточную часть производительности
 ## 8. Заключение
 В ходе выполнения работы:
-- реализовал Итерационный метод Зейделя
-- распараллелил его при помощи технологии MPI
+- реализовал фильтр Гауса с ядром 3х3
+- алгоритм разбиения изображения на блоки
+- реализовал параллельный алгоритм фильтра Гауса с блочным разбиением при помощи MPI
 - рассчитал характекристик ускорение и эффективности для распараллеленного алгоритма
-- выяснил, что параллельная обработка позволяет ускорить алгоритм при больших размерах системы
+- выяснил, что параллельная обработка позволяет ускорить алгоритм
 
 ## 9. Источники
-1. Сысоев А. В.              Курс лекций по параллельному программированию
+1. А.В. Сысоев               Курс лекций по параллельному программированию
 2. В.П. Гергель, Р.Г.        Стронгин Основы параллельных вычислений для многопроцессорных вычислительных систем
-3. Н.В. Копченова И.А.       Марон Вычислительная математика в примерах и задачах
+3. В.Е. Турпалов             Курс лекций по обработке изображений
 4. Документация Open MPI     https://www.open-mpi.org/doc/
 5. Microsoft Функции MPI     https://learn.microsoft.com/ru-ru/message-passing-interface/mpi-functions
 
 ## Приложения
 
-### Генерация системы уравнений
+### 1. Вычисление размера блока
 ```cpp
-void GenerateTestData(int n, int seed) {
-    std::vector<double> x(n, 0.0);
-    std::vector<double> a(n * n, 0.0);
-    std::vector<double> b(n, 0.0);
+int MorozovNBlockGaussFilterMPI::CalculateTileSize(int width, int height, int mpi_size) {
+  if (mpi_size <= 0 || width <= 0 || height <= 0) {
+    return 1;
+  }
+  int img_sqr = width * height;
+  int tiles_sqr_per_proc = img_sqr / mpi_size;
+  if (tiles_sqr_per_proc <= 0) {
+    return 1;
+  }
+  int tile_wh = static_cast<int>(round(sqrt(static_cast<double>(tiles_sqr_per_proc))));
+  return std::max(1, tile_wh);
+}
+```
 
-    std::mt19937 gen(seed);
-    std::uniform_real_distribution<double> dist_coeff(0.0, 1.0);
-    std::uniform_real_distribution<double> dist_solution(-10.0, 10.0);
+### 2. Подсчет числа строк/столбцов
+```cpp
+int MorozovNBlockGaussFilterMPI::GetTileColsRowsCount(int src_wh, int tile_wh) {
+  int count = src_wh / tile_wh;
+  if (src_wh % tile_wh != 0) {
+    count++;
+  }
+  return count;
+}
+```
 
-    for (int i = 0; i < n; i++) {
-      x[i] = dist_solution(gen);
-    }
-    // Генерируем матрицу с диагональным преобладанием
-    for (int i = 0; i < n; i++) {
-      double row_sum = 0.0;
-      for (int j = 0; j < n; j++) {
-        if (i != j) {
-          a[i * n + j] = dist_coeff(gen);
-          row_sum += std::abs(a[i * n + j]);
+### 3. Получение данных для каждого блока
+```cpp
+std::tuple<std::vector<uint8_t>, std::vector<int>> MorozovNBlockGaussFilterMPI::ParseImageToTiles(
+    const std::vector<uint8_t> &src, int width, int height, int rows, int cols, int tile_w, int tile_h) {
+  int shifts_len = 6 * cols * rows;
+  std::vector<int> whrlud(shifts_len, 0);
+  std::vector<uint8_t> tiles_imgs;
+
+  int tile_ind_shifts = 0;
+  for (int idY = 0; idY < rows; idY++) {
+    for (int idX = 0; idX < cols; idX++) {
+      int x = idX * tile_w;
+      int y = idY * tile_h;
+      int t_width = std::min(tile_w, width - x);
+      int t_height = std::min(tile_h, height - y);
+
+      // Determine border sizes
+      int l = (x == 0) ? 0 : 1;
+      int r = (x + t_width == width) ? 0 : 1;
+      int u = (y == 0) ? 0 : 1;
+      int d = (y + t_height == height) ? 0 : 1;
+
+      whrlud[tile_ind_shifts + 0] = t_width;
+      whrlud[tile_ind_shifts + 1] = t_height;
+      whrlud[tile_ind_shifts + 2] = r;
+      whrlud[tile_ind_shifts + 3] = l;
+      whrlud[tile_ind_shifts + 4] = u;
+      whrlud[tile_ind_shifts + 5] = d;
+      tile_ind_shifts += 6;
+
+      // Allocate space for this tile with borders
+      int w_over = t_width + r + l;
+      int h_over = t_height + u + d;
+      int tile_start = tiles_imgs.size();
+      tiles_imgs.resize(tiles_imgs.size() + w_over * h_over * 3, 0);
+
+      // Copy tile data with borders
+      for (int j = -u; j < t_height + d; j++) {
+        for (int i = -l; i < t_width + r; i++) {
+          int src_x = std::clamp(i + x, 0, width - 1);
+          int src_y = std::clamp(j + y, 0, height - 1);
+          int src_pix_id = 3 * ((src_y * width) + src_x);
+          int tile_pix_id = tile_start + 3 * (((j + u) * w_over) + (i + l));
+          tiles_imgs[tile_pix_id + 0] = src[src_pix_id + 0];
+          tiles_imgs[tile_pix_id + 1] = src[src_pix_id + 1];
+          tiles_imgs[tile_pix_id + 2] = src[src_pix_id + 2];
         }
       }
-      a[i * n + i] = row_sum + 1.0 + dist_coeff(gen);  // гарантируем преобладание
     }
-    // Вычисляем правую часть
-    for (int i = 0; i < n; i++) {
-      b[i] = 0.0;
-      for (int j = 0; j < n; j++) {
-        b[i] += a[i * n + j] * x[j];
+  }
+  return std::make_tuple(tiles_imgs, whrlud);
+}
+```
+
+### 4. Получение размера одного блока
+```cpp
+int MorozovNBlockGaussFilterMPI::GetTilesDataSize(const std::vector<int> &shifts, int tile_start_id, int tiles_count) {
+  int tiles_data_size = 0;
+  int tile_displ = tile_start_id;
+  for (int i = 0; i < tiles_count; i++) {
+    int w = shifts[(tile_displ * 6) + 0];
+    int h = shifts[(tile_displ * 6) + 1];
+    int r = shifts[(tile_displ * 6) + 2];
+    int l = shifts[(tile_displ * 6) + 3];
+    int u = shifts[(tile_displ * 6) + 4];
+    int d = shifts[(tile_displ * 6) + 5];
+    tiles_data_size += (w + r + l) * (h + u + d);
+    tile_displ++;
+  }
+  return 3 * tiles_data_size;
+}
+```
+
+### 5. Обработка всех тайлов процесса
+```cpp
+  // Process tiles
+  std::vector<uint8_t> res(tiles_data_size, 0);
+  int tiles_data_displ = 0;
+  int res_displ = 0;
+
+  for (int k = 0; k < tiles_count; k++) {
+    int tile_ind = k * 6;
+    int w = tiles_attr[tile_ind + 0];
+    int h = tiles_attr[tile_ind + 1];
+    int r = tiles_attr[tile_ind + 2];
+    int l = tiles_attr[tile_ind + 3];
+    int u = tiles_attr[tile_ind + 4];
+    int d = tiles_attr[tile_ind + 5];
+
+    int w_over = (w + r + l);
+    int h_over = (h + u + d);
+
+    // Process only the valid region (excluding borders used for filtering)
+    for (int y = u; y < (h_over - d); y++) {
+      for (int x = l; x < (w_over - r); x++) {
+        int res_x = x - l;
+        int res_y = y - u;
+        int pix_id = res_displ + (3 * ((res_y * w) + res_x));
+        Color new_color = CalculatePixelColor(tiles_data.data() + tiles_data_displ, x, y, w_over, h_over);
+        res[pix_id + 0] = new_color.r;
+        res[pix_id + 1] = new_color.g;
+        res[pix_id + 2] = new_color.b;
       }
     }
-    input_data_ = std::make_tuple(n, a, b, task_eps_);
-    correct_data_ = x;
+    tiles_data_displ += 3 * w_over * h_over;
+    res_displ += 3 * w * h;
   }
+```
+
+### 6. Алгоритм слияния блоков в результирующее изображение
+```cpp
+std::vector<uint8_t> MorozovNBlockGaussFilterMPI::SimpleMergeTiles(const std::vector<uint8_t> &tiles_data,
+                                                                   const std::vector<int> &tiles_attr, int image_width,
+                                                                   int image_height, int tile_w, int tile_h, int cols,
+                                                                   int rows) {
+  std::vector<uint8_t> image(image_width * image_height * 3, 0);
+  int tile_data_offset = 0;
+
+  // Tiles are stored in row-major order (same as created in ParseImageToTiles)
+  for (int idY = 0; idY < rows; idY++) {
+    for (int idX = 0; idX < cols; idX++) {
+      int tile_idx = idY * cols + idX;
+      if (tile_idx >= static_cast<int>(tiles_attr.size() / 6)) {
+        break;
+      }
+
+      int attr_idx = tile_idx * 6;
+      int tile_width = tiles_attr[attr_idx + 0];
+      int tile_height = tiles_attr[attr_idx + 1];
+
+      // Calculate original tile position in the image
+      int tile_start_x = idX * tile_w;
+      int tile_start_y = idY * tile_h;
+
+      // Copy tile data to the correct position in the image
+      for (int y = 0; y < tile_height; y++) {
+        for (int x = 0; x < tile_width; x++) {
+          int image_x = tile_start_x + x;
+          int image_y = tile_start_y + y;
+
+          if (image_x >= image_width || image_y >= image_height) {
+            continue;
+          }
+
+          int tile_pixel_idx = tile_data_offset + 3 * (y * tile_width + x);
+          int image_pixel_idx = 3 * ((image_y * image_width) + image_x);
+
+          image[image_pixel_idx + 0] = tiles_data[tile_pixel_idx + 0];
+          image[image_pixel_idx + 1] = tiles_data[tile_pixel_idx + 1];
+          image[image_pixel_idx + 2] = tiles_data[tile_pixel_idx + 2];
+        }
+      }
+
+      tile_data_offset += 3 * tile_width * tile_height;
+    }
+  }
+
+  return image;
+}
 ```

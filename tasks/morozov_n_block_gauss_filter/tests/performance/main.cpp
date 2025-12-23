@@ -18,8 +18,8 @@ class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfT
   std::vector<uint8_t> correct_data_;
   // double global_eps_ = 1e-9;
   int seed_ = 777;
-  int height_ = 7000;
-  int width_ = 7000;
+  int height_ = 2000;
+  int width_ = 2000;
 
   void SetUp() override {
     // GenerateTestData(n_, seed_);

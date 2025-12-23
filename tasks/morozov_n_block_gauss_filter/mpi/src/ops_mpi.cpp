@@ -189,8 +189,6 @@ bool MorozovNBlockGaussFilterMPI::PostProcessingImpl() {
 
 std::tuple<std::vector<uint8_t>, std::vector<int>> MorozovNBlockGaussFilterMPI::ParseImageToTiles(
     const std::vector<uint8_t> &src, int width, int height, int rows, int cols, int tile_w, int tile_h) {
-  // int max_tile_w = tile_w + 2;  // tile + left + right borders
-  // int max_tile_h = tile_h + 2;  // tile + top + bottom borders
   int shifts_len = 6 * cols * rows;
   std::vector<int> whrlud(shifts_len, 0);
   std::vector<uint8_t> tiles_imgs;
