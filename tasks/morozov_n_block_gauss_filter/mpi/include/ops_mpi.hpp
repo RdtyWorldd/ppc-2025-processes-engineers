@@ -22,7 +22,7 @@ class MorozovNBlockGaussFilterMPI : public BaseTask {
   bool PostProcessingImpl() override;
 
   const float kernel[3][3] = {{1.0f, 2.0f, 1.0f}, {2.0f, 4.0f, 2.0f}, {1.0f, 2.0f, 1.0f}};
-  std::vector<uint8_t>
+  std::vector<uint8_t> new_img;
 
       Color CalculatePixelColor(uint8_t *src, int x, int y, int width, int height);
   std::tuple<std::vector<uint8_t>, std::vector<int>> ParseImageToTiles(std::vector<uint8_t> &src, int width, int height,

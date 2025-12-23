@@ -45,7 +45,6 @@ bool MorozovNBlockGaussFilterMPI::RunImpl() {
   std::vector<int> proc_tile_count;
   int tiles_data_size = 0;
   std::vector<int> tiles_attr;
-  std::vector<uint8_t> new_img;
   int rank = 0;
   int mpi_size = 0;
   MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -209,17 +208,8 @@ bool MorozovNBlockGaussFilterMPI::RunImpl() {
 
   // для проверки с последовательной версией
   if (rank == 0) {
-    //  res_displ = 0;
-    //  for(int i = 0; i < tiles_count; i ++) {
-    //    int tile_ind = i * 6;
-    //    int w = tiles_attr[tile_ind + 0];
-    //    int h = tiles_attr[tile_ind + 1];
-    //    print_pic(h, w, 3, res.data() + res_displ);
-    //    std::cout << "\n";
-    //    res_displ += 3 * w * h;
-    //  }
-
-    print_pic(in_height, in_width, 3, SimpleMergeTiles(new_img, tiles_attr, in_width, in_height).data());
+    new_img = SimpleMergeTiles(new_img, tiles_attr, in_width, in_height);
+    print_pic(in_height, in_width, 3, new_img.data());
   }
 
   MPI_Barrier(MPI_COMM_WORLD);
@@ -227,6 +217,22 @@ bool MorozovNBlockGaussFilterMPI::RunImpl() {
 }
 
 bool MorozovNBlockGaussFilterMPI::PostProcessingImpl() {
+  int rank = 0;
+  int mpi_size = 0;
+  MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+  MPI_Comm_size(MPI_COMM_WORLD, &mpi_size);
+
+  int new_img_size = 0;
+  if(rank == 0) {
+    new_img_size = static_cast<int>(new_img.size());
+  }
+  MPI_Bcast(&new_img_size, 1, MPI_INT, 0, MPI_COMM_WORLD);
+  if(rank != 0) {
+    new_img.resize(new_img_size, 0);
+  }
+  MPI_Bcast(new_img.data(), new_img_size, MPI_BYTE, 0, MPI_COMM_WORLD);
+
+  GetOutput() = new_img;
   return true;
 }
 

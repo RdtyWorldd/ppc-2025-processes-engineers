@@ -39,6 +39,7 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
       }
     }
     input_data_ = std::make_tuple(img, 5, 5);
+    CalcCorrectData();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
@@ -56,7 +57,15 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
     //     return false;
     //   }
     // }
-    return output_data.empty();
+    if(output_data.size() != correct_data_.size()){
+      return false;
+    }
+    for(size_t i = 0; i < output_data.size(); i++) {
+      if(output_data[i] != correct_data_[i]) {
+        return false;
+      }
+    }
+    return !output_data.empty();
   }
 
   InType GetTestInputData() final {
@@ -65,11 +74,19 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
 
  private:
   InType input_data_;
-  std::vector<double> correct_data_;
-  double task_eps_ = 0.0;
+  std::vector<uint8_t> correct_data_;
   // double global_eps_ = 1e-9;
   int seed_ = 777;
 
+  void CalcCorrectData() {
+    MorozovNBlockGaussFilterSEQ task(input_data_);
+    task.Validation();
+    task.PreProcessing();
+    task.Run();
+    task.PostProcessing();
+
+    correct_data_ = task.GetOutput();
+  }
   // void GenerateTestData(std::size_t n, int seed) {}
   // void GetTestFromFile(TestType &params) {}
 };
