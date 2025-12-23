@@ -4,6 +4,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <filesystem>
 #include <fstream>
 #include <random>
 #include <stdexcept>
@@ -22,46 +23,33 @@ namespace morozov_n_block_gauss_filter {
 class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFuncTests<InType, OutType, TestType> {
  public:
   static std::string PrintTestParam(const TestType &test_param) {
-    return std::to_string(std::get<0>(test_param)) + "_" + std::get<1>(test_param);
+    return std::get<0>(test_param) + "_" + std::to_string(std::get<1>(test_param)) + "_" +
+           std::to_string(std::get<2>(test_param));
   }
 
  protected:
   void SetUp() override {
     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
-    std::vector<uint8_t> img(5 * 5 * 3, 0);
-    int count = 0;
-    for (int i = 0; i < 5; i++) {
-      for (int j = 0; j < 5; j++) {
-        for (int k = 0; k < 3; k++) {
-          img[3 * ((i * 5) + j) + k] = count;
-          count++;
-        }
-      }
+    const std::string &test_type = std::get<0>(params);
+    int width = std::get<1>(params);
+    int height = std::get<2>(params);
+
+    if (test_type == "gen") {
+      // Generate image with specified dimensions
+      input_data_ = GenerateImage(width, height, width * 1000 + height);
+    } else {
+      // Read image from file (width and height will be set from file)
+      input_data_ = ReadImageFromTaskData(test_type + ".jpg");
     }
-    input_data_ = std::make_tuple(img, 5, 5);
     CalcCorrectData();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    // debug
-    // if (output_data.size() <= 16) {
-    //   std::string result;
-    //   for (std::size_t i = 0; i < output_data.size(); i++) {
-    //     result += std::to_string(correct_data_[i]) + " ";
-    //   }
-    //   result += '\n';
-    //   std::cout << result;
-    // }
-    // for (std::size_t i = 0; i < output_data.size(); i++) {
-    //   if (abs((output_data[i] - correct_data_[i])) > task_eps_) {
-    //     return false;
-    //   }
-    // }
-    if(output_data.size() != correct_data_.size()){
+    if (output_data.size() != correct_data_.size()) {
       return false;
     }
-    for(size_t i = 0; i < output_data.size(); i++) {
-      if(output_data[i] != correct_data_[i]) {
+    for (size_t i = 0; i < output_data.size(); i++) {
+      if (output_data[i] != correct_data_[i]) {
         return false;
       }
     }
@@ -75,8 +63,6 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
  private:
   InType input_data_;
   std::vector<uint8_t> correct_data_;
-  // double global_eps_ = 1e-9;
-  int seed_ = 777;
 
   void CalcCorrectData() {
     MorozovNBlockGaussFilterSEQ task(input_data_);
@@ -87,8 +73,105 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
 
     correct_data_ = task.GetOutput();
   }
-  // void GenerateTestData(std::size_t n, int seed) {}
-  // void GetTestFromFile(TestType &params) {}
+
+  // Generate a test image with specified dimensions and seed
+  static std::tuple<std::vector<uint8_t>, int, int> GenerateImage(int width, int height, int seed) {
+    if (width <= 0 || height <= 0) {
+      throw std::invalid_argument("Image dimensions must be positive");
+    }
+    std::vector<uint8_t> img(width * height * 3, 0);
+    std::mt19937 gen(seed);
+    std::uniform_int_distribution<uint8_t> dis(0, 255);
+
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        int pixel_idx = 3 * ((i * width) + j);
+        img[pixel_idx + 0] = dis(gen);  // R
+        img[pixel_idx + 1] = dis(gen);  // G
+        img[pixel_idx + 2] = dis(gen);  // B
+      }
+    }
+    return std::make_tuple(img, width, height);
+  }
+
+  // Read image from file using stb_image
+  static std::tuple<std::vector<uint8_t>, int, int> ReadImageFromFile(const std::string &filename) {
+    int width = -1;
+    int height = -1;
+    int channels = -1;
+
+    auto *data = stbi_load(filename.c_str(), &width, &height, &channels, STBI_rgb);
+    if (data == nullptr) {
+      throw std::runtime_error("Failed to load image: " + filename + " - " + std::string(stbi_failure_reason()));
+    }
+
+    const int expected_channels = 3;
+    std::vector<uint8_t> img(data, data + (static_cast<ptrdiff_t>(width * height * expected_channels)));
+    stbi_image_free(data);
+
+    return std::make_tuple(img, width, height);
+  }
+
+  // Read image from task data directory
+  static std::tuple<std::vector<uint8_t>, int, int> ReadImageFromTaskData(const std::string &relative_path) {
+    std::string abs_path = ppc::util::GetAbsoluteTaskPath(PPC_ID_morozov_n_block_gauss_filter, relative_path);
+    return ReadImageFromFile(abs_path);
+  }
+
+  // Save image to file using stb_image_write
+  // static bool SaveImageToFile(const std::vector<uint8_t> &img_data, int width, int height,
+  //                              const std::string &filename) {
+  //   if (img_data.size() < static_cast<size_t>(width * height * 3)) {
+  //     return false;
+  //   }
+  //   int result = stbi_write_png(filename.c_str(), width, height, 3, img_data.data(), width * 3);
+  //   return result != 0;
+  // }
+
+  // // Save result images (correct and actual) for comparison
+  // void SaveResultImages(const OutType &output_data) {
+  //   try {
+  //     // Get test parameters for naming
+  //     TestType params = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kTestParams)>(GetParam());
+  //     std::string test_name = std::get<static_cast<std::size_t>(ppc::util::GTestParamIndex::kNameTest)>(GetParam());
+  //     const std::string &test_type = std::get<0>(params);
+  //     int width = std::get<1>(params);
+  //     int height = std::get<2>(params);
+
+  //     // Get actual dimensions from input
+  //     int img_width = std::get<1>(input_data_);
+  //     int img_height = std::get<2>(input_data_);
+
+  //     // Create output directory
+  //     std::filesystem::path output_dir;
+  //     const char *tmpdir = std::getenv("PPC_TEST_TMPDIR");
+  //     if (tmpdir != nullptr) {
+  //       output_dir = std::filesystem::path(tmpdir) / "filter_results";
+  //     } else {
+  //       output_dir = std::filesystem::path("test_output") / "filter_results";
+  //     }
+  //     std::filesystem::create_directories(output_dir);
+
+  //     // Generate unique filename based on test name and parameters
+  //     std::string base_name = test_name;
+  //     if (test_type == "gen") {
+  //       base_name += "_gen_" + std::to_string(width) + "x" + std::to_string(height);
+  //     } else {
+  //       base_name += "_" + test_type;
+  //     }
+
+  //     // Save correct result
+  //     std::string correct_filename = (output_dir / (base_name + "_correct.png")).string();
+  //     SaveImageToFile(correct_data_, img_width, img_height, correct_filename);
+
+  //     // Save actual result
+  //     std::string actual_filename = (output_dir / (base_name + "_actual.png")).string();
+  //     SaveImageToFile(output_data, img_width, img_height, actual_filename);
+  //   } catch (const std::exception &e) {
+  //     // Silently fail - image saving is for debugging, shouldn't break tests
+  //     (void)e;
+  //   }
+  // }
 };
 
 namespace {
@@ -97,7 +180,15 @@ TEST_P(MorozovNBlockGaussFilterFuncTestsProcesses, MatmulFromPic) {
   ExecuteTest(GetParam());
 }
 
-const std::array<TestType, 1> kTestParam = {std::make_tuple(4, "test_1", 0.01)};
+// Test parameters: (test_type, width, height)
+// test_type can be "gen" for generated images or image filename without extension for file-based tests
+const std::array<TestType, 5> kTestParam = {
+    std::make_tuple("img_1", 0, 0),    // Read from file img_1.jpg
+    std::make_tuple("gen", 50, 50),    // Generated 50x50 image
+    std::make_tuple("gen", 100, 100),  // Generated 100x100 image
+    std::make_tuple("gen", 150, 150),  // Generated 150x150 image
+    std::make_tuple("gen", 200, 200)   // Generated 200x200 image
+};
 
 const auto kTestTasksList = std::tuple_cat(
     ppc::util::AddFuncTask<MorozovNBlockGaussFilterMPI, InType>(kTestParam, PPC_SETTINGS_morozov_n_block_gauss_filter),

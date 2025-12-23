@@ -15,19 +15,24 @@ namespace morozov_n_block_gauss_filter {
 
 class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfTests<InType, OutType> {
   InType input_data_;
-  std::vector<double> correct_data_;
-  double task_eps_ = 0.000001;
+  std::vector<uint8_t> correct_data_;
   // double global_eps_ = 1e-9;
   int seed_ = 777;
-  std::size_t n_ = 2000;
+  int height_ = 7000;
+  int width_ = 7000;
 
   void SetUp() override {
     // GenerateTestData(n_, seed_);
+    input_data_ = GenerateImage(width_, height_, seed_);
+    CalcCorrectData();
   }
 
   bool CheckTestOutputData(OutType &output_data) final {
-    for (std::size_t i = 0; i < output_data.size(); i++) {
-      if (std::fabs((output_data[i] - correct_data_[i])) > task_eps_) {
+    if (output_data.size() != correct_data_.size()) {
+      return false;
+    }
+    for (size_t i = 0; i < output_data.size(); i++) {
+      if (output_data[i] != correct_data_[i]) {
         return false;
       }
     }
@@ -37,58 +42,35 @@ class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfT
   InType GetTestInputData() final {
     return input_data_;
   }
-  void GenerateTestData(std::size_t n, int seed) {
-    std::vector<double> x(n, 0.0);
-    std::vector<double> a(n * n, 0.0);
-    std::vector<double> b(n, 0.0);
 
+  void CalcCorrectData() {
+    MorozovNBlockGaussFilterSEQ task(input_data_);
+    task.Validation();
+    task.PreProcessing();
+    task.Run();
+    task.PostProcessing();
+
+    correct_data_ = task.GetOutput();
+  }
+
+  // Generate a test image with specified dimensions and seed
+  static std::tuple<std::vector<uint8_t>, int, int> GenerateImage(int width, int height, int seed) {
+    if (width <= 0 || height <= 0) {
+      throw std::invalid_argument("Image dimensions must be positive");
+    }
+    std::vector<uint8_t> img(width * height * 3, 0);
     std::mt19937 gen(seed);
-    std::uniform_real_distribution<double> dist_coeff(0.0, 1.0);
-    std::uniform_real_distribution<double> dist_solution(-10.0, 10.0);
+    std::uniform_int_distribution<uint8_t> dis(0, 255);
 
-    for (std::size_t i = 0; i < n; i++) {
-      x[i] = dist_solution(gen);
-    }
-
-    // debug
-    //  for(int i = 0; i < n; i++){
-    //     std::cout << x[i] << " ";
-    //  }
-    //  std::cout << "\n\n";
-
-    // Генерируем матрицу с диагональным преобладанием
-    for (std::size_t i = 0; i < n; i++) {
-      double row_sum = 0.0;
-      for (std::size_t j = 0; j < n; j++) {
-        if (i != j) {
-          a[(i * n) + j] = dist_coeff(gen);
-          row_sum += std::fabs(a[(i * n) + j]);
-        }
-      }
-      a[(i * n) + i] = row_sum + 1.0 + dist_coeff(gen);  // гарантируем преобладание
-
-      // debug
-      //  for (int j = 0; j < n; j++) {
-      //      std::cout << a[i * n + j] << " ";
-      //  }
-      //  std::cout << "\n";
-    }
-
-    // Вычисляем правую часть
-    for (std::size_t i = 0; i < n; i++) {
-      b[i] = 0.0;
-      for (std::size_t j = 0; j < n; j++) {
-        b[i] += a[(i * n) + j] * x[j];
+    for (int i = 0; i < height; i++) {
+      for (int j = 0; j < width; j++) {
+        int pixel_idx = 3 * ((i * width) + j);
+        img[pixel_idx + 0] = dis(gen);  // R
+        img[pixel_idx + 1] = dis(gen);  // G
+        img[pixel_idx + 2] = dis(gen);  // B
       }
     }
-    // debug
-    //  for(int i = 0;i < n; i++){
-    //    std::cout << b[i] << " ";
-    // }
-    // std::cout << "\n\n";
-
-    // input_data_ = std::make_tuple(n, a, b, task_eps_);
-    correct_data_ = x;
+    return std::make_tuple(img, width, height);
   }
 };
 
