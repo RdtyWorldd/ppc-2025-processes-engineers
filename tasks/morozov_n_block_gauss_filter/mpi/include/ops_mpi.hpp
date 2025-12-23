@@ -35,7 +35,6 @@ class MorozovNBlockGaussFilterMPI : public BaseTask {
                     const std::vector<int> &shifts, int mpi_size);
   std::vector<uint8_t> SimpleMergeTiles(const std::vector<uint8_t> &tiles_data, const std::vector<int> &tiles_attr,
                                         int image_width, int image_height, int tile_w, int tile_h, int cols, int rows);
-  void print_pic(int h, int w, int c, uint8_t *img);
 };
 
 }  // namespace morozov_n_block_gauss_filter

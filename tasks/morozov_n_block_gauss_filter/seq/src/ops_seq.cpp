@@ -10,18 +10,6 @@
 
 namespace morozov_n_block_gauss_filter {
 
-void MorozovNBlockGaussFilterSEQ::print_pic(int h, int w, int c, uint8_t *img) {
-  for (int i = 0; i < h; i++) {
-    for (int j = 0; j < w; j++) {
-      for (int k = 0; k < c; k++) {
-        std::cout << (int)img[3 * ((i * w) + j) + k] << " ";
-      }
-      std::cout << "| ";
-    }
-    std::cout << "\n";
-  }
-}
-
 MorozovNBlockGaussFilterSEQ::MorozovNBlockGaussFilterSEQ(const InType &in) {
   SetTypeOfTask(GetStaticTypeOfTask());
   GetInput() = in;
