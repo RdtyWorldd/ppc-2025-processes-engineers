@@ -60,14 +60,14 @@ class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfT
     }
     std::vector<uint8_t> img(width * height * 3, 0);
     std::mt19937 gen(seed);
-    std::uniform_int_distribution<uint8_t> dis(0, 255);
+    std::uniform_int_distribution<uint32_t> dis(0, 255);
 
     for (int i = 0; i < height; i++) {
       for (int j = 0; j < width; j++) {
         int pixel_idx = 3 * ((i * width) + j);
-        img[pixel_idx + 0] = dis(gen);  // R
-        img[pixel_idx + 1] = dis(gen);  // G
-        img[pixel_idx + 2] = dis(gen);  // B
+        img[pixel_idx + 0] = static_cast<uint8_t>(dis(gen));  // R
+        img[pixel_idx + 1] = static_cast<uint8_t>(dis(gen));  // G
+        img[pixel_idx + 2] = static_cast<uint8_t>(dis(gen));  // B
       }
     }
     return std::make_tuple(img, width, height);
