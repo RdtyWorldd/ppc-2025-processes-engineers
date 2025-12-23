@@ -3,9 +3,7 @@
 
 #include <array>
 #include <cmath>
-#include <cstddef>
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
 #include <random>
 #include <stdexcept>
 #include <string>
@@ -36,7 +34,7 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
 
     if (test_type == "gen") {
       // Generate image with specified dimensions
-      input_data_ = GenerateImage(width, height, width * 1000 + height);
+      input_data_ = GenerateImage(width, height, (width * 1000) + height);
     } else {
       // Read image from file (width and height will be set from file)
       input_data_ = ReadImageFromTaskData(test_type + ".jpg");
@@ -79,7 +77,7 @@ class MorozovNBlockGaussFilterFuncTestsProcesses : public ppc::util::BaseRunFunc
     if (width <= 0 || height <= 0) {
       throw std::invalid_argument("Image dimensions must be positive");
     }
-    std::vector<uint8_t> img(width * height * 3, 0);
+    std::vector<uint8_t> img(static_cast<size_t>(width * height * 3), 0);
     std::mt19937 gen(seed);
     std::uniform_int_distribution<uint32_t> dis(0, 255);
 
