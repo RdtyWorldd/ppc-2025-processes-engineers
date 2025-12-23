@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <tuple>
 #include <vector>
@@ -66,7 +67,7 @@ Color MorozovNBlockGaussFilterSEQ::CalculatePixelColor(const std::vector<uint8_t
       int pix_id = 3 * ((id_y * width) + id_x);
       const int kernel_row = row_offset + kRadY;
       const int kernel_col = col_offset + kRadX;
-      float kernel_val = kernel_[static_cast<size_t>(kernel_row)][static_cast<size_t>(kernel_col)] * kKernelInv;
+      float kernel_val = kernel_.at(static_cast<size_t>(kernel_row)).at(static_cast<size_t>(kernel_col)) * kKernelInv;
       r += static_cast<float>(src[pix_id + 0]) * kernel_val;
       g += static_cast<float>(src[pix_id + 1]) * kernel_val;
       b += static_cast<float>(src[pix_id + 2]) * kernel_val;

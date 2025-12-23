@@ -4,8 +4,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 #include "morozov_n_block_gauss_filter/common/include/common.hpp"
@@ -287,7 +289,7 @@ Color MorozovNBlockGaussFilterMPI::CalculatePixelColor(const uint8_t *src, int x
       int pix_id = 3 * ((id_y * width) + id_x);
       const int kernel_row = row_offset + kRadY;
       const int kernel_col = col_offset + kRadX;
-      float kernel_val = kernel_[static_cast<size_t>(kernel_row)][static_cast<size_t>(kernel_col)] * kKernelInv;
+      float kernel_val = kernel_.at(static_cast<size_t>(kernel_row)).at(static_cast<size_t>(kernel_col)) * kKernelInv;
       r += static_cast<float>(src[pix_id + 0]) * kernel_val;
       g += static_cast<float>(src[pix_id + 1]) * kernel_val;
       b += static_cast<float>(src[pix_id + 2]) * kernel_val;
@@ -374,7 +376,7 @@ void MorozovNBlockGaussFilterMPI::CopyTileWithBorders(const std::vector<uint8_t>
       int src_x = std::clamp(i + x, 0, width - 1);
       int src_y = std::clamp(j + y, 0, height - 1);
       int src_pix_id = 3 * ((src_y * width) + src_x);
-      int tile_pix_id = tile_start + 3 * (((j + u) * w_over) + (i + l));
+      int tile_pix_id = tile_start + (3 * (((j + u) * w_over) + (i + l)));
       tiles_imgs[tile_pix_id + 0] = src[src_pix_id + 0];
       tiles_imgs[tile_pix_id + 1] = src[src_pix_id + 1];
       tiles_imgs[tile_pix_id + 2] = src[src_pix_id + 2];
@@ -394,7 +396,7 @@ void MorozovNBlockGaussFilterMPI::CopyTileToImage(const std::vector<uint8_t> &ti
         continue;
       }
 
-      int tile_pixel_idx = tile_data_offset + 3 * ((row_idx * tile_width) + col_idx);
+      int tile_pixel_idx = tile_data_offset + (3 * ((row_idx * tile_width) + col_idx));
       int image_pixel_idx = 3 * ((image_y * image_width) + image_x);
 
       image[image_pixel_idx + 0] = tiles_data[tile_pixel_idx + 0];

@@ -2,7 +2,6 @@
 
 #include <array>
 #include <cstdint>
-#include <tuple>
 #include <vector>
 
 #include "morozov_n_block_gauss_filter/common/include/common.hpp"
@@ -23,7 +22,7 @@ class MorozovNBlockGaussFilterSEQ : public BaseTask {
   bool RunImpl() override;
   bool PostProcessingImpl() override;
 
-  const std::array<std::array<float, 3>, 3> kernel_ = {{{1.0F, 2.0F, 1.0F}, {2.0F, 4.0F, 2.0F}, {1.0F, 2.0F, 1.0F}}};
-  Color CalculatePixelColor(const std::vector<uint8_t> &src, int x, int y, int width, int height) const;
+  std::array<std::array<float, 3>, 3> kernel_ = {{{1.0F, 2.0F, 1.0F}, {2.0F, 4.0F, 2.0F}, {1.0F, 2.0F, 1.0F}}};
+  [[nodiscard]] Color CalculatePixelColor(const std::vector<uint8_t> &src, int x, int y, int width, int height) const;
 };
 }  // namespace morozov_n_block_gauss_filter
