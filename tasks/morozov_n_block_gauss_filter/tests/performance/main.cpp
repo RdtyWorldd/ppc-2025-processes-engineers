@@ -1,8 +1,9 @@
 #include <gtest/gtest.h>
 
 #include <cmath>
-#include <cstddef>
+#include <cstdint>
 #include <random>
+#include <stdexcept>
 #include <tuple>
 #include <vector>
 
@@ -58,7 +59,7 @@ class MorozovNBlockGaussFilterPerfTestProcesses : public ppc::util::BaseRunPerfT
     if (width <= 0 || height <= 0) {
       throw std::invalid_argument("Image dimensions must be positive");
     }
-    std::vector<uint8_t> img(width * height * 3, 0);
+    std::vector<uint8_t> img(static_cast<size_t>(width * height * 3), 0);
     std::mt19937 gen(seed);
     std::uniform_int_distribution<uint32_t> dis(0, 255);
 

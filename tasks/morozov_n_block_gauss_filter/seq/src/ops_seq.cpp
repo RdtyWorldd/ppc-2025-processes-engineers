@@ -2,7 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
-#include <cstddef>
+#include <cstdint>
 #include <tuple>
 #include <vector>
 
@@ -28,11 +28,11 @@ bool MorozovNBlockGaussFilterSEQ::RunImpl() {
   int width = std::get<1>(GetInput());
   int height = std::get<2>(GetInput());
 
-  std::vector<uint8_t> res(width * height * 3, 0);
-  for (int y = 0; y < height; y++) {
-    for (int x = 0; x < width; x++) {
-      Color new_color = CalculatePixelColor(src, x, y, width, height);
-      int pix_idx = 3 * ((y * width) + x);
+  std::vector<uint8_t> res(static_cast<size_t>(width * height * 3), 0);
+  for (int row_idx = 0; row_idx < height; row_idx++) {
+    for (int col_idx = 0; col_idx < width; col_idx++) {
+      Color new_color = CalculatePixelColor(src, col_idx, row_idx, width, height);
+      int pix_idx = 3 * ((row_idx * width) + col_idx);
       res[pix_idx + 0] = new_color.r;
       res[pix_idx + 1] = new_color.g;
       res[pix_idx + 2] = new_color.b;
@@ -47,35 +47,36 @@ bool MorozovNBlockGaussFilterSEQ::PostProcessingImpl() {
 }
 
 Color MorozovNBlockGaussFilterSEQ::CalculatePixelColor(const std::vector<uint8_t> &src, int x, int y, int width,
-                                                       int height) {
-  constexpr uint8_t ch_max = 255;
-  constexpr uint8_t ch_min = 0;
-  constexpr int rad_x = 1;
-  constexpr int rad_y = 1;
-  // Calculate kernel sum once (1+2+1+2+4+2+1+2+1 = 16, so normalization is 1/16 = 0.0625)
-  constexpr float kernel_sum = 16.0f;
-  constexpr float kernel_inv = 1.0f / kernel_sum;
+                                                       int height) const {
+  constexpr uint8_t kChMax = 255;
+  constexpr uint8_t kChMin = 0;
+  constexpr int kRadX = 1;
+  constexpr int kRadY = 1;
+  constexpr float kKernelSum = 16.0F;
+  constexpr float kKernelInv = 1.0F / kKernelSum;
 
-  float r = 0.0f;
-  float g = 0.0f;
-  float b = 0.0f;
+  float r = 0.0F;
+  float g = 0.0F;
+  float b = 0.0F;
 
-  for (int l = -rad_y; l <= rad_y; l++) {
-    for (int k = -rad_x; k <= rad_x; k++) {
-      int idX = std::clamp(x + k, 0, width - 1);
-      int idY = std::clamp(y + l, 0, height - 1);
-      int pix_id = 3 * ((idY * width) + idX);
-      float kernel_val = kernel[l + rad_y][k + rad_x] * kernel_inv;
+  for (int row_offset = -kRadY; row_offset <= kRadY; row_offset++) {
+    for (int col_offset = -kRadX; col_offset <= kRadX; col_offset++) {
+      int id_x = std::clamp(x + col_offset, 0, width - 1);
+      int id_y = std::clamp(y + row_offset, 0, height - 1);
+      int pix_id = 3 * ((id_y * width) + id_x);
+      const int kernel_row = row_offset + kRadY;
+      const int kernel_col = col_offset + kRadX;
+      float kernel_val = kernel_[static_cast<size_t>(kernel_row)][static_cast<size_t>(kernel_col)] * kKernelInv;
       r += static_cast<float>(src[pix_id + 0]) * kernel_val;
       g += static_cast<float>(src[pix_id + 1]) * kernel_val;
       b += static_cast<float>(src[pix_id + 2]) * kernel_val;
     }
   }
 
-  Color res;
-  res.r = std::clamp(static_cast<uint8_t>(r), ch_min, ch_max);
-  res.g = std::clamp(static_cast<uint8_t>(g), ch_min, ch_max);
-  res.b = std::clamp(static_cast<uint8_t>(b), ch_min, ch_max);
+  Color res{};
+  res.r = std::clamp(static_cast<uint8_t>(r), kChMin, kChMax);
+  res.g = std::clamp(static_cast<uint8_t>(g), kChMin, kChMax);
+  res.b = std::clamp(static_cast<uint8_t>(b), kChMin, kChMax);
   return res;
 }
 
