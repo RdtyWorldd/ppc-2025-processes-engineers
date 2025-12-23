@@ -282,7 +282,7 @@ test_2.txt
 3. Н.В. Копченова И.А.       Марон Вычислительная математика в примерах и задачах
 4. Документация Open MPI     https://www.open-mpi.org/doc/
 5. Microsoft Функции MPI     https://learn.microsoft.com/ru-ru/message-passing-interface/mpi-functions
-
+   
 ## Приложения
 
 ### Генерация системы уравнений
