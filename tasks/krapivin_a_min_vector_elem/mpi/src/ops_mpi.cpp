@@ -66,9 +66,10 @@ bool KrapivinAMinVectorElemMPI::PostProcessingImpl() {
 void KrapivinAMinVectorElemMPI::SplitData(std::vector<int> &input, std::vector<int> &send_counts,
                                           std::vector<int> &displacements, int rank, int mpi_size) {
   int n = 0;
+  std::vector<int> global_data;
   if (rank == 0) {
-    input = GetInput();
-    n = static_cast<int>(input.size());
+    global_data = GetInput();
+    n = static_cast<int>(global_data.size());
   }
   MPI_Bcast(&n, 1, MPI_INT, 0, MPI_COMM_WORLD);
 
@@ -90,11 +91,9 @@ void KrapivinAMinVectorElemMPI::SplitData(std::vector<int> &input, std::vector<i
     displacements[i] = disp_sum;
   }
 
-  if (rank != 0) {
-    input.resize(send_counts[rank]);
-  }
+  input.resize(send_counts[rank]);
 
-  MPI_Scatterv(input.data(), send_counts.data(), displacements.data(), MPI_INT, input.data(),
+  MPI_Scatterv(global_data.data(), send_counts.data(), displacements.data(), MPI_INT, input.data(),
                static_cast<int>(input.size()), MPI_INT, 0, MPI_COMM_WORLD);
 }
 
